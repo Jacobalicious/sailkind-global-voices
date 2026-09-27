@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SailKind · Review stories</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0b2233; --ink-soft: #4a6477; --paper: #f3f7f9; --card: #fff; --line: #dbe7ec;
+    --sea: #0e7c86; --sea-deep: #0a4f63; --coral: #ff7a59; --ok: #2a9d8f; --no: #c0392b; --warn: #b7791f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: Inter, system-ui, sans-serif; color: var(--ink); background: var(--paper); display: flex; flex-direction: column; }
+  header {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 12px 20px; background: linear-gradient(90deg, var(--sea-deep), var(--sea)); color: #fff;
+  }
+  header h1 { font: 600 20px Fraunces, Georgia, serif; margin: 0; }
+  header .spacer { flex: 1; }
+  header a { color: #fff; font-size: 13px; font-weight: 600; }
+  .tabs { display: flex; gap: 6px; }
+  .tab {
+    border: 1px solid rgba(255,255,255,.4); background: transparent; color: #fff; cursor: pointer;
+    border-radius: 999px; padding: 6px 13px; font: 600 13px Inter, sans-serif;
+  }
+  .tab.on { background: #fff; color: var(--sea-deep); }
+  .tab .n { opacity: .7; margin-left: 4px; }
+
+  main { flex: 1; display: flex; min-height: 0; }
+  #list { width: 320px; overflow-y: auto; border-right: 1px solid var(--line); background: var(--card); }
+  .item { padding: 14px 16px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .item:hover { background: #f5fafb; }
+  .item.on { background: #e6f3f5; box-shadow: inset 3px 0 0 var(--sea); }
+  .item b { display: block; font-size: 15px; }
+  .item .meta { font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+  .item .preview { font-size: 13px; color: var(--ink-soft); margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .empty { padding: 30px 20px; color: var(--ink-soft); text-align: center; }
+
+  #editor { flex: 1; overflow-y: auto; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 22px 24px 120px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 3px 8px; border-radius: 6px; }
+  .b-pending { background: #fff4d6; color: var(--warn); }
+  .b-approved { background: #d9f2ee; color: var(--ok); }
+  .b-denied { background: #fbe1de; color: var(--no); }
+  .b-minor { background: var(--no); color: #fff; }
+
+  .private { background: #eef2f4; border: 1px dashed #b9c9d2; border-radius: 12px; padding: 12px 14px; margin: 14px 0 20px; font-size: 13px; }
+  .private h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--ink-soft); }
+  .private div { margin: 2px 0; }
+
+  h2 { font: 600 24px Fraunces, Georgia, serif; margin: 6px 0 0; }
+  h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--sea); margin: 26px 0 4px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 5px; }
+  label small { font-weight: 400; color: var(--ink-soft); }
+  input, textarea, select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+    font: 14px Inter, sans-serif; color: var(--ink); background: #fff;
+  }
+  textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid #9fd3d8; border-color: var(--sea); }
+  .row { display: flex; gap: 12px; }
+  .row > * { flex: 1; }
+  .placeRow { display: flex; gap: 8px; }
+  .placeRow input { flex: 1; }
+  #pickMap { height: 240px; border-radius: 10px; border: 1px solid var(--line); margin-top: 8px; background: #7fa5d2; }
+  .hint { font-size: 12px; color: var(--ink-soft); margin-top: 5px; }
+  .changed { font-size: 11px; color: var(--warn); font-weight: 600; margin-left: 6px; }
+  .reset { font-size: 11px; color: var(--sea); cursor: pointer; margin-left: 6px; text-decoration: underline; }
+
+  .photo { display: flex; gap: 14px; align-items: flex-start; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-top: 8px; }
+  .photo img { width: 140px; height: 105px; object-fit: cover; border-radius: 8px; background: #eee; }
+  .photo .info { flex: 1; font-size: 13px; }
+  .check { display: flex; gap: 8px; align-items: flex-start; font-weight: 500; font-size: 13px; margin-top: 10px; }
+  .check input { width: auto; margin-top: 2px; }
+
+  .bar {
+    position: sticky; bottom: 0; background: rgba(255,255,255,.96); backdrop-filter: blur(6px);
+    border-top: 1px solid var(--line); padding: 12px 24px; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;
+  }
+  .btn { border: 0; border-radius: 999px; cursor: pointer; font: 600 14px Inter, sans-serif; padding: 10px 18px; }
+  .btn:disabled { opacity: .5; cursor: wait; }
+  .approve { background: var(--ok); color: #fff; }
+  .save { background: var(--sea-deep); color: #fff; }
+  .deny { background: #fff; color: var(--no); border: 1px solid #f0c4be; }
+  .ghost { background: #fff; color: var(--ink-soft); border: 1px solid var(--line); }
+  .bar .spacer { flex: 1; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%) translateY(20px); opacity: 0;
+    background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 14px;
+    transition: .25s; pointer-events: none; z-index: 5000; max-width: 90vw;
+  }
+  #toast.on { opacity: 1; transform: translateX(-50%); pointer-events: auto; }
+  #toast a { color: #ffd166; }
+  #toast.err { background: var(--no); }
+
+  @media (max-width: 760px) {
+    main { flex-direction: column; }
+    #list { width: 100%; max-height: 35vh; border-right: 0; border-bottom: 1px solid var(--line); }
+    .row { flex-direction: column; gap: 0; }
+    .wrap { padding: 16px 16px 120px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🌊 Review stories</h1>
+  <div class="tabs" id="tabs"></div>
+  <div class="spacer"></div>
+  <a id="siteLink" target="_blank" rel="noopener">Open map preview ↗</a>
+</header>
+<main>
+  <div id="list"></div>
+  <div id="editor"><div class="empty">Loading responses…</div></div>
+</main>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const TOPICS = ["Coral & reefs", "Plastic & cleanups", "Fisheries", "Mangroves & coasts",
+  "Marine wildlife", "Climate & ocean", "Education & culture", "Other"];
+const TOPIC_WORDS = [
+  ["Coral & reefs", /coral|reef|bleach/], ["Plastic & cleanups", /plastic|trash|litter|waste|pollut|debris|sewage|runoff/],
+  ["Fisheries", /fish|bycatch|trawl/], ["Mangroves & coasts", /mangrove|coast|erosion|sea.?level|wetland|seagrass|develop/],
+  ["Marine wildlife", /wildlife|species|turtle|whale|shark|dolphin|bird|habitat/], ["Climate & ocean", /climate|warming|acidif|temperature|storm|heat/],
+];
+const STORY_FIELDS = [
+  ["about", "About me", "Tell me about yourself"],
+  ["relationship", "Our community and the ocean", "Their community's relationship with the ocean"],
+  ["issue", "An issue we see", "One ocean issue they see"],
+  ["doing", "What we're doing", "What their community is doing"],
+  ["wish", "What I wish the world understood", "What they wish people understood"],
+];
+
+// ---- Server calls (with a demo mode when opened outside Google) ------------
+const server = (fn, ...args) => new Promise((resolve, reject) => {
+  if (window.google && google.script) {
+    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+  } else {
+    setTimeout(() => { try { resolve(DEMO[fn](...args)); } catch (e) { reject(e); } }, 300);
+  }
+});
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const guessTopic = t => { for (const c of (t || "").split(",")) { const h = TOPIC_WORDS.find(([, re]) => re.test(c.toLowerCase())); if (h) return h[0]; } return "Other"; };
+
+let items = [], view = "pending", selected = null, site = "", pickMap, pickMarker;
+
+function toast(html, isErr) {
+  const t = $("#toast");
+  t.innerHTML = html; t.className = "on" + (isErr ? " err" : "");
+  clearTimeout(t.timer); t.timer = setTimeout(() => t.className = "", isErr ? 7000 : 6000);
+}
+
+async function load(keepKey) {
+  try {
+    const res = await server("listResponses");
+    items = res.items; site = res.site;
+    $("#siteLink").href = site + "?dev";
+    renderTabs();
+    const still = items.find(i => i.key === keepKey && i.status === view);
+    select(still ? still.key : (items.find(i => i.status === view) || {}).key);
+  } catch (e) {
+    $("#editor").innerHTML = `<div class="empty">Couldn't load responses: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderTabs() {
+  const n = s => items.filter(i => i.status === s).length;
+  $("#tabs").innerHTML = [["pending", "To review"], ["approved", "On the map"], ["denied", "Denied"]]
+    .map(([s, l]) => `<button class="tab${view === s ? " on" : ""}" data-s="${s}">${l}<span class="n">${n(s)}</span></button>`).join("");
+  const list = items.filter(i => i.status === view);
+  $("#list").innerHTML = list.map(i => `
+    <div class="item${i.key === selected ? " on" : ""}" data-k="${esc(i.key)}">
+      <b>${esc(i.current.name || "(no name)")} ${i.private.under18.toLowerCase().startsWith("y") ? '<span class="badge b-minor">Under 18</span>' : ""}</b>
+      <div class="meta">${esc(i.current.place || "No location yet")} · ${esc(i.key.split(" ")[0])}</div>
+      <div class="preview">${esc(i.current.about || i.current.relationship)}</div>
+    </div>`).join("") || `<div class="empty">Nothing here.</div>`;
+}
+
+$("#tabs").onclick = e => {
+  const b = e.target.closest(".tab"); if (!b) return;
+  view = b.dataset.s; renderTabs();
+  select((items.find(i => i.status === view) || {}).key);
+};
+$("#list").onclick = e => { const it = e.target.closest(".item"); if (it) select(it.dataset.k); };
+
+function select(key) {
+  selected = key;
+  pickMarker = null;
+  renderTabs();
+  const it = items.find(i => i.key === key);
+  if (!it) { $("#editor").innerHTML = `<div class="empty">${view === "pending" ? "All caught up — no stories waiting. 🎉" : "Nothing here."}</div>`; pickMap = null; return; }
+  const c = it.current, p = it.private;
+  const minor = p.under18.toLowerCase().startsWith("y");
+
+  $("#editor").innerHTML = `
+  <div class="wrap">
+    <span class="badge b-${it.status}">${it.status === "pending" ? "To review" : it.status === "approved" ? "On the map" : "Denied"}</span>
+    ${minor ? '<span class="badge b-minor">Under 18</span>' : ""}
+    <h2>${esc(c.name || "(no name)")}</h2>
+
+    <div class="private">
+      <h4>🔒 Private — never shown on the site</h4>
+      <div><b>Full name:</b> ${esc(p.fullName || "—")}</div>
+      <div><b>Email:</b> ${p.emails.map(esc).join(", ") || "—"}</div>
+      <div><b>Pronouns:</b> ${esc(p.pronouns || "—")}</div>
+      <div><b>Under 18:</b> ${esc(p.under18 || "—")}${minor ? " — check any photo shows no one identifiable without guardian permission." : ""}</div>
+      <div><b>Submitted:</b> ${esc(it.key)}</div>
+    </div>
+
+    <h3>On the map</h3>
+    <div class="row">
+      <div><label>Display name</label><input id="f-name" value="${esc(c.name)}"></div>
+      <div><label>Title <small>(optional)</small></label><input id="f-title" value="${esc(c.title)}" placeholder=""></div>
+    </div>
+
+    <label>Map location <small>— type a place and press Find, then click the map to fine-tune</small></label>
+    <div class="placeRow">
+      <input id="f-place" value="${esc(c.place)}" placeholder="City, Country">
+      <button class="btn ghost" id="findBtn" type="button">Find</button>
+    </div>
+    <div id="pickMap"></div>
+    <div class="hint" id="pinHint">${c.lat !== "" && c.lat != null ? "Pin set." : "No pin yet."}</div>
+
+    <label>Topic <small>(colour of the pin)</small></label>
+    <select id="f-topic">${TOPICS.map(t => `<option${t === (c.topic || guessTopic(c.issues)) ? " selected" : ""}>${esc(t)}</option>`).join("")}</select>
+
+    <h3>Their story</h3>
+    ${STORY_FIELDS.map(([k, label, q]) => `
+      <label>${label} <small>— ${q}</small>
+        ${c[k] !== it.original[k] ? `<span class="changed">edited</span><span class="reset" data-reset="${k}">undo</span>` : ""}
+      </label>
+      <textarea id="f-${k}">${esc(c[k])}</textarea>`).join("")}
+    <label>Biggest issues here</label>
+    <input id="f-issues" value="${esc(c.issues)}">
+
+    <h3>Photo</h3>
+    <div id="photos">${it.fileIds.length ? "" : '<div class="hint">No file attached.</div>'}</div>
+  </div>
+  <div class="bar">
+    ${it.status !== "denied" ? '<button class="btn deny" data-act="deny">Deny</button>' : '<button class="btn ghost" data-act="pending">Move back to review</button>'}
+    ${it.status === "approved" ? '<button class="btn ghost" data-act="pending">Take off map</button>' : ""}
+    <span class="spacer"></span>
+    ${it.status === "approved"
+      ? '<button class="btn save" data-act="save">Save changes</button>'
+      : '<button class="btn approve" data-act="approve">✓ Approve &amp; put on map</button>'}
+  </div>`;
+
+  // Title placeholder follows name + place.
+  const updateTitle = () => { $("#f-title").placeholder = `${$("#f-name").value || "Name"} · ${($("#f-place").value.split(",")[0] || "Place").trim()}`; };
+  $("#f-name").oninput = updateTitle; $("#f-place").addEventListener("input", updateTitle); updateTitle();
+
+  // Map picker
+  let pos = c.lat !== "" && c.lat != null ? { lat: +c.lat, lng: +c.lng } : null;
+  pickMap = L.map("pickMap", { worldCopyJump: true }).setView(pos ? [pos.lat, pos.lng] : [15, 10], pos ? 6 : 1);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", { maxNativeZoom: 13, maxZoom: 16, attribution: "Esri" }).addTo(pickMap);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}", { maxNativeZoom: 13, maxZoom: 16 }).addTo(pickMap);
+  const setPin = (ll, zoom) => {
+    pos = { lat: +(+ll.lat).toFixed(4), lng: +(+ll.lng).toFixed(4) };
+    if (pickMarker && pickMap.hasLayer(pickMarker)) pickMarker.setLatLng(ll); else pickMarker = L.marker(ll).addTo(pickMap);
+    if (zoom) pickMap.setView(ll, zoom);
+  };
+  if (pos) setPin(pos);
+  pickMap.on("click", e => { const w = e.latlng.wrap(); setPin(w); $("#pinHint").textContent = "Pin moved by hand."; });
+  $("#pickMap").getPos = () => pos;
+
+  const find = async () => {
+    const place = $("#f-place").value.trim(); if (!place) return;
+    $("#pinHint").textContent = "Looking it up…";
+    try {
+      const hit = await server("locate", place);
+      if (!hit) { $("#pinHint").textContent = `Couldn't find "${place}". Try "City, Country", or click the map.`; return; }
+      setPin(hit, 7);
+      $("#pinHint").textContent = `Found: ${hit.label}. Click the map to move the pin if it's not quite right.`;
+    } catch (e) { $("#pinHint").textContent = "Lookup failed: " + e.message; }
+  };
+  $("#findBtn").onclick = find;
+  $("#f-place").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); find(); } };
+  if (!pos && c.place) find();
+
+  // Undo edits
+  $("#editor").querySelectorAll("[data-reset]").forEach(el => el.onclick = () => {
+    const k = el.dataset.reset; $("#f-" + k).value = it.original[k]; el.previousElementSibling.remove(); el.remove();
+  });
+
+  // Photos
+  it.fileIds.forEach(async (id, n) => {
+    const box = document.createElement("div"); box.className = "photo";
+    box.innerHTML = `<img alt=""><div class="info">Loading file…</div>`;
+    $("#photos").appendChild(box);
+    try {
+      const f = await server("filePreview", id);
+      if (f.image) box.querySelector("img").src = f.image; else box.querySelector("img").remove();
+      const isImg = /^image\//.test(f.type);
+      box.querySelector(".info").innerHTML = `
+        <b>${esc(f.name)}</b> <a href="${esc(f.url)}" target="_blank" rel="noopener">open ↗</a>
+        ${n === 0 && isImg ? `
+          <label class="check"><input type="checkbox" id="f-photo" ${c.showPhoto ? "checked" : ""} ${it.consent ? "" : "disabled"}>
+          <span>Show this photo with the story${it.consent ? " <small>(makes the file viewable by anyone with the link)</small>" : " — <b>they didn't tick the media permission box</b>"}</span></label>`
+        : `<div class="hint">${isImg ? "Only the first photo is shown on the map." : "Not an image, so it won't show on the map."}</div>`}`;
+    } catch (e) {
+      box.querySelector(".info").textContent = "Couldn't load this file: " + e.message;
+    }
+  });
+
+  $("#editor").querySelector(".bar").onclick = e => { const b = e.target.closest("[data-act]"); if (b) act(it, b.dataset.act); };
+}
+
+async function act(it, action) {
+  const story = {
+    name: $("#f-name").value.trim(),
+    title: $("#f-title").value.trim(),
+    place: $("#f-place").value.trim(),
+    topic: $("#f-topic").value,
+    issues: $("#f-issues").value.trim(),
+    showPhoto: !!($("#f-photo") && $("#f-photo").checked),
+  };
+  STORY_FIELDS.forEach(([k]) => story[k] = $("#f-" + k).value.trim());
+  const pos = $("#pickMap").getPos();
+  story.lat = pos ? pos.lat : ""; story.lng = pos ? pos.lng : "";
+
+  if ((action === "approve" || action === "save") && (!story.place || !pos)) { toast("Set a map location and pin first.", true); return; }
+  if (action === "deny" && !confirm(`Deny ${story.name || "this story"}? You can move it back later.`)) return;
+
+  document.querySelectorAll(".bar .btn").forEach(b => b.disabled = true);
+  try {
+    await server("saveResponse", it.key, action, story);
+    const msg = {
+      approve: `✓ On the map! <a href="${site}?dev" target="_blank">See it in the preview</a> (give Google a minute or two). The public site updates within the hour.`,
+      save: `Saved. <a href="${site}?dev" target="_blank">Check the preview</a> in a minute or two.`,
+      deny: "Denied. It's in the Denied tab if you change your mind.",
+      pending: "Moved back to review and taken off the map.",
+    }[action];
+    toast(msg);
+    await load(action === "save" ? it.key : null);
+  } catch (e) {
+    toast("Didn't save: " + esc(e.message), true);
+    document.querySelectorAll(".bar .btn").forEach(b => b.disabled = false);
+  }
+}
+
+// ---- Demo data, used only when this page is opened outside Google ---------
+const DEMO = (() => {
+  const items = [
+    { key: "9/27/2026 9:21:32", status: "pending", consent: true, fileIds: ["demo1"],
+      private: { fullName: "Alex Example", emails: ["alex@example.com"], pronouns: "they/them", under18: "No" },
+      original: { name: "Alex", place: "Valparaiso, Chile", about: "I grew up on the coast and learned to swim before I could ride a bike.", relationship: "Most families here fish or work at the port.", issue: "Plastic washes up after every storm.", doing: "A weekly beach cleanup run by the school.", wish: "We are small but we care a lot.", issues: "Plastic pollution, Overfishing" } },
+    { key: "9/26/2026 14:02:10", status: "pending", consent: false, fileIds: [],
+      private: { fullName: "Sam Sample", emails: ["sam@example.com"], pronouns: "", under18: "Yes" },
+      original: { name: "Sam", place: "", about: "Student who loves reefs.", relationship: "Tourism and fishing.", issue: "Coral bleaching.", doing: "Reef monitoring club.", wish: "Reefs are our livelihood.", issues: "Coral reef damage" } },
+  ];
+  items.forEach(i => i.current = Object.assign({ title: "", lat: "", lng: "", topic: "", showPhoto: false }, i.original));
+  return {
+    listResponses: () => ({ items: JSON.parse(JSON.stringify(items)), site: "https://jacobalicious.github.io/sailkind-global-voices/" }),
+    locate: p => /chile/i.test(p) ? { lat: -33.0472, lng: -71.6127, label: "Valparaíso, Chile" } : null,
+    filePreview: () => ({ name: "beach.jpg", type: "image/jpeg", url: "#", image: "" }),
+    saveResponse: (key, action, story) => {
+      const it = items.find(i => i.key === key);
+      it.status = action === "save" ? it.status : action === "approve" ? "approved" : action;
+      if (it.status === "approved") it.current = story;
+      return { status: it.status };
+    },
+  };
+})();
+
+load();
+</script>
+</body>
+</html>

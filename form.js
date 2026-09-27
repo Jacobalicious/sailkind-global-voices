@@ -38,6 +38,11 @@ const COLUMNS = {
   file:         h => h.includes("file to attach"),
   place:        h => h.startsWith("map location"),
   approved:     h => h.startsWith("approved"),
+  // Set by the review page (admin/): overrides for the automatic guesses.
+  title:        h => h === "title",
+  topic:        h => h === "topic",
+  lat:          h => h === "latitude",
+  lng:          h => h === "longitude",
 };
 
 const TOPIC_WORDS = [
@@ -104,7 +109,9 @@ export async function formStories(csvText, { known = {}, lookup = geocode } = {}
     const name = get("name") || "A SailKind voice";
     if (!place) { problems.push(`${name}: no Map location filled in`); continue; }
 
-    const pos = known[id]?.place === place ? { lat: known[id].lat, lng: known[id].lng } : await lookup(place);
+    const lat = parseFloat(get("lat")), lng = parseFloat(get("lng"));
+    const pos = isFinite(lat) && isFinite(lng) ? { lat, lng }
+      : known[id]?.place === place ? { lat: known[id].lat, lng: known[id].lng } : await lookup(place);
     if (!pos) { problems.push(`${name}: couldn't find "${place}" on the map. Try "City, Country".`); continue; }
 
     const d = new Date(get("timestamp"));
@@ -119,13 +126,13 @@ export async function formStories(csvText, { known = {}, lookup = geocode } = {}
 
     stories.push({
       id,
-      title: `${name} · ${place.split(",")[0].trim()}`,
+      title: get("title") || `${name} · ${place.split(",")[0].trim()}`,
       name,
       community: "",
       place,
       country: place.split(",").pop().trim(),
       ...pos,
-      topic: topicFrom(get("issues")),
+      topic: get("topic") || topicFrom(get("issues")),
       date: isNaN(d) ? "" : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
       story: sections.map(([h, v]) => `## ${h}\n${v}`).join("\n\n"),
       photo: get("consent") ? photoFrom(get("file")) : "",  // media only with the permission box ticked
