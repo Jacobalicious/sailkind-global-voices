@@ -1,5 +1,5 @@
 // Bundles Code.gs + Admin.html into one Apps Script file (admin/dist/Code.gs).
-// Run: node admin/build.mjs
+// Run: node admin/build.mjs   (admin/deploy.ps1 builds and uploads)
 //
 // Google's HtmlService rewrites inline scripts and mangles some valid JavaScript
 // (regexes ending in a slash, HTML tags inside template strings…). So each inline
@@ -23,6 +23,6 @@ const out = "// Built from admin/Code.gs and admin/Admin.html by admin/build.mjs
 
 fs.mkdirSync(new URL("dist/", dir), { recursive: true });
 fs.writeFileSync(new URL("dist/Code.gs", dir), out);
-fs.writeFileSync(new URL("dist/preview.html", dir), packed);  // for testing the packed page locally
-fs.rmSync(new URL("paste-into-apps-script.gs", dir), { force: true });
+fs.copyFileSync(new URL("appsscript.json", dir), new URL("dist/appsscript.json", dir));
+fs.writeFileSync(new URL("preview.html", dir), packed);  // for testing the packed page locally (demo data)
 console.log("Wrote admin/dist/Code.gs");
