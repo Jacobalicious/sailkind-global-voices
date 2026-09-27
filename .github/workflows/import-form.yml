@@ -1,0 +1,42 @@
+# Every hour, copies approved Google Form stories onto the map.
+# Can also be run by hand: Actions tab → "Import form stories" → Run workflow.
+name: Import form stories
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: publish-story
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.run.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - id: run
+        run: node .github/scripts/import-form.mjs
+      - if: steps.run.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add stories.json
+          git commit -m "Import approved form stories"
+          git push
+
+  deploy:
+    needs: import
+    if: needs.import.outputs.changed == 'true'
+    uses: ./.github/workflows/pages.yml

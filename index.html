@@ -100,6 +100,11 @@
   #detail .where { color: var(--sea); font-weight: 600; font-size: 13px; margin: 8px 0 2px; }
   #detail .who { color: var(--ink-soft); font-size: 13px; }
   #detail .story { line-height: 1.65; font-size: 15px; white-space: pre-wrap; margin-top: 14px; }
+  #detail .story h4 {
+    font: 600 12px Inter, sans-serif; text-transform: uppercase; letter-spacing: .6px;
+    color: var(--sea); margin: 18px 0 2px;
+  }
+  #detail .story h4:first-child { margin-top: 0; }
   .tag {
     display: inline-block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
     padding: 3px 8px; border-radius: 6px; color: #fff; margin-top: 10px;
@@ -143,6 +148,16 @@
   .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
   .err { color: #c0392b; font-size: 13px; margin-top: 10px; min-height: 1em; }
 
+  /* Dev preview banner (?dev) */
+  #devBar {
+    display: none; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 8px 20px; background: #2b2d42; color: #fff; font-size: 13px; z-index: 1000;
+  }
+  #devBar.on { display: flex; }
+  #devBar b { color: #ffd166; }
+  #devBar button { background: #ffd166; color: #2b2d42; box-shadow: none; padding: 6px 12px; font-size: 13px; }
+  #devBar .msg { opacity: .85; }
+
   /* Phone */
   @media (max-width: 760px) {
     header { padding: 10px 16px; }
@@ -168,6 +183,13 @@
   <div class="spacer"></div>
   <button class="btn" id="shareBtn">+ Share your story</button>
 </header>
+
+<div id="devBar">
+  <b>DEV PREVIEW</b>
+  <span class="msg" id="devMsg">Reading the Google Form sheet…</span>
+  <span class="spacer" style="flex:1"></span>
+  <button class="btn" id="devRefresh">Refresh from sheet</button>
+</div>
 
 <main>
   <div id="map"></div>
@@ -347,7 +369,7 @@ function openStory(id, fly = true) {
       <div class="where">📍 ${esc(s.place)}</div>
       <div class="who">Shared by ${esc(s.name)}${s.community ? ` · ${esc(s.community)}` : ""}${s.date ? ` · ${esc(s.date)}` : ""}</div>
       <span class="tag" style="background:${colorOf(s.topic)}">${esc(s.topic)}</span>${s.sample ? `<span class="tag sample">Sample story</span>` : ""}
-      <div class="story">${esc(s.story)}</div>
+      <div class="story">${esc(s.story).replace(/\n*^## (.*)$\n?/gm, "<h4>$1</h4>")}</div>
       ${link ? `<p><a class="link" href="${esc(link)}" target="_blank" rel="noopener">Learn more →</a></p>` : ""}
     </div>`;
   $("#panelHead").style.display = "none";
@@ -380,20 +402,27 @@ $("#filters").addEventListener("click", e => {
 });
 $("#search").addEventListener("input", render);
 
-fetch("stories.json", { cache: "no-cache" })
+// Replaces everything on the map with this list of stories.
+function showStories(data) {
+  for (const id in markers) { markers[id].remove(); delete markers[id]; }
+  stories = data.filter(s => isFinite(s.lat) && isFinite(s.lng));
+  for (const s of stories) {
+    markers[s.id] = L.marker([s.lat, s.lng], { icon: pinIcon(s.topic), title: s.title })
+      .bindTooltip(`<b>${esc(s.title)}</b><br>${esc(s.place)}`, { direction: "top", offset: [0, -24] })
+      .on("click", () => openStory(s.id, false));
+  }
+  renderFilters(); render();
+}
+
+const storiesLoaded = fetch("stories.json", { cache: "no-cache" })
   .then(r => r.json())
   .then(data => {
-    stories = data.filter(s => isFinite(s.lat) && isFinite(s.lng));
-    for (const s of stories) {
-      markers[s.id] = L.marker([s.lat, s.lng], { icon: pinIcon(s.topic), title: s.title })
-        .bindTooltip(`<b>${esc(s.title)}</b><br>${esc(s.place)}`, { direction: "top", offset: [0, -24] })
-        .on("click", () => openStory(s.id, false));
-    }
-    renderFilters(); render();
+    showStories(data);
     const fromHash = decodeURIComponent(location.hash.slice(1));
     if (fromHash) openStory(fromHash);
+    return data;
   })
-  .catch(() => { $("#count").textContent = "Couldn't load stories right now."; });
+  .catch(() => { $("#count").textContent = "Couldn't load stories right now."; return []; });
 
 // ---- Share form ----------------------------------------------------------
 const form = $("#form");
@@ -459,6 +488,52 @@ form.addEventListener("submit", e => {
   $("#formErr").textContent = "";
   $("#pickHint").textContent = "Thanks! Finish posting in the GitHub tab that just opened.";
 });
+</script>
+<script type="module">
+// Dev preview: add ?dev to the address to see approved form stories straight
+// from the Google sheet, without waiting for the hourly update.
+// (?dev&csv=<link> previews a different sheet link.)
+import { FORM_CSV, formStories, geocode } from "./form.js";
+
+const params = new URLSearchParams(location.search);
+if (params.has("dev")) {
+  const csvUrl = params.get("csv") || FORM_CSV;
+  const bar = document.getElementById("devBar");
+  const msg = document.getElementById("devMsg");
+  bar.classList.add("on");
+  map.invalidateSize();
+
+  // Remember looked-up places in this browser so refreshes are quick.
+  const cache = (() => { try { return JSON.parse(localStorage.getItem("placeCache") || "{}"); } catch { return {}; } })();
+  const lookup = async place => {
+    if (!(place in cache)) {
+      msg.textContent = `Finding "${place}" on the map…`;
+      cache[place] = await geocode(place);
+      try { localStorage.setItem("placeCache", JSON.stringify(cache)); } catch {}
+    }
+    return cache[place];
+  };
+
+  async function refresh() {
+    if (!csvUrl) { msg.textContent = "No form sheet link set up yet."; return; }
+    msg.textContent = "Reading the Google Form sheet…";
+    try {
+      const [site, csv] = await Promise.all([
+        storiesLoaded,
+        fetch(csvUrl + (csvUrl.includes("?") ? "&" : "?") + "t=" + Date.now()).then(r => r.text()),
+      ]);
+      const { stories: fromForm, problems } = await formStories(csv, { lookup });
+      showStories([...fromForm, ...site.filter(s => !s.id.startsWith("form-"))]);
+      msg.textContent = `${fromForm.length} approved form ${fromForm.length === 1 ? "story" : "stories"} shown live`
+        + (problems.length ? ` · ⚠️ ${problems.join(" · ")}` : "")
+        + " · The public site catches up within the hour.";
+    } catch (e) {
+      msg.textContent = "Couldn't read the sheet: " + e.message;
+    }
+  }
+  document.getElementById("devRefresh").onclick = refresh;
+  refresh();
+}
 </script>
 </body>
 </html>
