@@ -2,7 +2,7 @@
 // Shared by the website (dev preview) and the GitHub Action that updates stories.json.
 
 // The published CSV link of the sheet's "Public" tab (approved rows, safe columns only).
-export const FORM_CSV = "";
+export const FORM_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTTdOA4JZ-_N3hj4IyahX-HUZANzbqd120A0SHK6CwmQWtXgi76WBWYwv_98EHI7WCFUdEpkbOzbMmo/pub?gid=584150587&single=true&output=csv";
 
 export function parseCsv(text) {
   const rows = [];
@@ -84,6 +84,7 @@ export async function geocode(place) {
 // known: earlier form stories by id, so unchanged places aren't looked up again.
 export async function formStories(csvText, { known = {}, lookup = geocode } = {}) {
   const [header = [], ...rows] = parseCsv(csvText);
+  if (!rows.length) return { stories: [], problems: [] };  // nothing approved yet
   const col = {};
   header.forEach((h, i) => {
     const key = Object.keys(COLUMNS).find(k => COLUMNS[k](h.trim().toLowerCase()));
