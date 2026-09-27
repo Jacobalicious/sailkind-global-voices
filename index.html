@@ -58,7 +58,9 @@
 
   /* Layout */
   main { flex: 1; display: flex; min-height: 0; position: relative; }
-  #map { flex: 1; background: #aad3df; }
+  /* Matches the open-ocean colour of the map tiles, so gaps while loading blend in. */
+  #map, #pickMap { background: #7fa5d2; }
+  #map { flex: 1; }
   aside {
     width: 380px; max-width: 100%;
     background: var(--card);
@@ -254,15 +256,30 @@ const safeUrl = u => /^https:\/\/[^\s"'<>]+$/i.test(u || "") ? u : "";
 const colorOf = t => TOPICS[t] || TOPICS.Other;
 
 // ---- Main map ------------------------------------------------------------
-const map = L.map("map", { worldCopyJump: true, minZoom: 2 }).setView([15, 10], 2);
+// The map stops at the top and bottom edges of the world (no empty sea beyond them).
+const WORLD = L.latLngBounds([-85, -1e6], [85, 1e6]);
+function lockToWorld(m) {
+  m.setMaxBounds(WORLD);
+  // Don't let people zoom out so far that the world is shorter than the map box.
+  const fit = () => {
+    m.setMinZoom(Math.max(1, Math.ceil(Math.log2(m.getSize().y / 256))));
+    m.panInsideBounds(WORLD, { animate: false });
+  };
+  fit();
+  m.on("resize", fit);
+}
+const map = L.map("map", { worldCopyJump: true, maxBoundsViscosity: 1 }).setView([15, 10], 2);
+lockToWorld(map);
 // Esri's ocean basemap: shows sea-floor depth, which suits an ocean site.
 const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/";
 const tiles = () => L.layerGroup([
   L.tileLayer(ESRI + "World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", {
     attribution: "Tiles &copy; Esri &mdash; GEBCO, NOAA, National Geographic, and other contributors",
     maxNativeZoom: 13, maxZoom: 16,
+    keepBuffer: 6,          // keep more tiles around the edges so dragging reveals map, not gaps
+    updateWhenIdle: false,  // start loading new tiles while still dragging
   }),
-  L.tileLayer(ESRI + "World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}", { maxNativeZoom: 13, maxZoom: 16 }),
+  L.tileLayer(ESRI + "World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}", { maxNativeZoom: 13, maxZoom: 16, keepBuffer: 6, updateWhenIdle: false }),
 ]);
 tiles().addTo(map);
 
@@ -387,7 +404,7 @@ function openForm() {
   $("#overlay").classList.add("open");
   $("#formErr").textContent = "";
   if (!pickMap) {
-    pickMap = L.map("pickMap", { worldCopyJump: true }).setView([15, 10], 1);
+    pickMap = L.map("pickMap", { worldCopyJump: true, maxBoundsViscosity: 1 }).setView([15, 10], 1);
     tiles().addTo(pickMap);
     pickMap.on("click", e => {
       const ll = e.latlng.wrap();
@@ -397,7 +414,10 @@ function openForm() {
       $("#pickHint").textContent = `Pin dropped at ${picked.lat}, ${picked.lng}. Click again to move it.`;
     });
   }
-  setTimeout(() => pickMap.invalidateSize(), 50);
+  setTimeout(() => {
+    pickMap.invalidateSize();
+    if (!pickMap.locked) { lockToWorld(pickMap); pickMap.locked = true; }
+  }, 50);
 }
 function closeForm() { $("#overlay").classList.remove("open"); }
 
