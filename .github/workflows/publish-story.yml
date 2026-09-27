@@ -1,0 +1,102 @@
+# When a moderator adds the "approved" label to a story issue,
+# this copies the story into stories.json so it shows up on the map.
+name: Publish approved story
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: publish-story
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event.label.name == 'approved'
+    runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.add.outputs.published }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add story to stories.json
+        id: add
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const issue = context.payload.issue;
+
+            // Issue forms arrive as "### Label\n\nvalue" sections.
+            const fields = {};
+            for (const part of (issue.body || "").split(/^### /m).slice(1)) {
+              const nl = part.indexOf("\n");
+              const label = part.slice(0, nl).trim();
+              let value = part.slice(nl + 1).trim();
+              if (value === "_No response_") value = "";
+              fields[label] = value;
+            }
+
+            const [lat, lng] = (fields["Coordinates"] || "").split(",").map(n => parseFloat(n));
+            if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+              core.setFailed("Coordinates missing or invalid: " + fields["Coordinates"]);
+              await github.rest.issues.createComment({ ...context.repo, issue_number: issue.number,
+                body: "Couldn't publish: the coordinates need to look like `10.54, -83.5`. Edit the issue, then remove and re-add the **approved** label." });
+              return;
+            }
+
+            const https = u => /^https:\/\/\S+$/i.test(u || "") ? u : "";
+            const id = "issue-" + issue.number;
+            const story = {
+              id,
+              title: fields["Story title"] || issue.title.replace(/^Story:\s*/i, ""),
+              name: fields["Your name"] || issue.user.login,
+              community: fields["Community or group"] || "",
+              place: fields["Place"] || "",
+              country: (fields["Place"] || "").split(",").pop().trim(),
+              lat: +lat.toFixed(4),
+              lng: +lng.toFixed(4),
+              topic: fields["Topic"] || "Other",
+              date: issue.created_at.slice(0, 7),
+              story: fields["Your story"] || "",
+              photo: https(fields["Photo link"]),
+              link: https(fields["Learn more link"]),
+            };
+
+            const stories = JSON.parse(fs.readFileSync("stories.json", "utf8"));
+            const i = stories.findIndex(s => s.id === id);
+            if (i >= 0) stories[i] = story; else stories.unshift(story);
+            fs.writeFileSync("stories.json", JSON.stringify(stories, null, 2) + "\n");
+            core.exportVariable("STORY_ID", id);
+            core.setOutput("published", "true");
+
+      - name: Commit
+        if: env.STORY_ID != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add stories.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Publish story from #${{ github.event.issue.number }}"
+          git push
+
+      - name: Thank the storyteller and close
+        if: env.STORY_ID != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = `https://${context.repo.owner.toLowerCase()}.github.io/${context.repo.repo}/#${process.env.STORY_ID}`;
+            await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number,
+              body: `🌊 Your story is on the map! It can take a minute or two to appear: ${url}` });
+            await github.rest.issues.update({ ...context.repo, issue_number: context.issue.number, state: "closed" });
+
+  deploy:
+    needs: publish
+    if: needs.publish.outputs.published == 'true'
+    uses: ./.github/workflows/pages.yml

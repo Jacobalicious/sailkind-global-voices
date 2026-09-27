@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SailKind Global Voices</title>
+<meta name="description" content="A map of ocean conservation stories from communities around the world.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0b2233;
+    --ink-soft: #4a6477;
+    --paper: #f7fbfc;
+    --card: #ffffff;
+    --line: #dbe7ec;
+    --sea: #0e7c86;
+    --sea-deep: #0a4f63;
+    --coral: #ff7a59;
+    --sand: #f4ead7;
+    --shadow: 0 10px 30px rgba(11, 34, 51, .18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: Inter, system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    display: flex;
+    flex-direction: column;
+  }
+  h1, h2, h3 { font-family: Fraunces, Georgia, serif; margin: 0; }
+
+  /* Header */
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 20px;
+    background: linear-gradient(90deg, var(--sea-deep), var(--sea));
+    color: #fff;
+    z-index: 1000;
+  }
+  header .brand { display: flex; align-items: center; gap: 10px; }
+  header .logo { font-size: 26px; }
+  header h1 { font-size: 22px; letter-spacing: .2px; }
+  header p { margin: 2px 0 0; font-size: 13px; opacity: .85; }
+  header .spacer { flex: 1; }
+  .btn {
+    border: 0; border-radius: 999px; cursor: pointer;
+    font: 600 14px Inter, sans-serif;
+    padding: 10px 18px;
+    background: var(--coral); color: #fff;
+    box-shadow: 0 4px 12px rgba(255, 122, 89, .35);
+    transition: transform .15s;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn.ghost { background: transparent; color: var(--sea-deep); box-shadow: none; border: 1px solid var(--line); }
+
+  /* Layout */
+  main { flex: 1; display: flex; min-height: 0; position: relative; }
+  #map { flex: 1; background: #aad3df; }
+  aside {
+    width: 380px; max-width: 100%;
+    background: var(--card);
+    border-left: 1px solid var(--line);
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .panel-head { padding: 16px 18px 10px; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-size: 18px; }
+  .panel-head .count { color: var(--ink-soft); font-size: 13px; margin-top: 2px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip {
+    border: 1px solid var(--line); background: #fff; color: var(--ink-soft);
+    border-radius: 999px; padding: 5px 11px; font: 500 12px Inter, sans-serif; cursor: pointer;
+  }
+  .chip.on { background: var(--sea); border-color: var(--sea); color: #fff; }
+  #search {
+    width: 100%; margin-top: 10px; padding: 9px 12px;
+    border: 1px solid var(--line); border-radius: 10px; font: 14px Inter, sans-serif;
+  }
+  #list { overflow-y: auto; flex: 1; padding: 8px; }
+  .item {
+    padding: 12px; border-radius: 12px; cursor: pointer; display: flex; gap: 12px;
+  }
+  .item:hover, .item.active { background: #eef6f8; }
+  .item .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex: none; }
+  .item h3 { font-size: 15px; font-family: Inter, sans-serif; font-weight: 600; }
+  .item .meta { color: var(--ink-soft); font-size: 12px; margin-top: 3px; }
+
+  /* Story detail */
+  #detail { overflow-y: auto; flex: 1; display: none; }
+  #detail.open { display: block; }
+  #detail .hero { width: 100%; height: 190px; object-fit: cover; display: block; background: var(--sand); }
+  #detail .body { padding: 16px 18px 28px; }
+  #detail .back { margin-bottom: 12px; }
+  #detail h2 { font-size: 24px; line-height: 1.2; }
+  #detail .where { color: var(--sea); font-weight: 600; font-size: 13px; margin: 8px 0 2px; }
+  #detail .who { color: var(--ink-soft); font-size: 13px; }
+  #detail .story { line-height: 1.65; font-size: 15px; white-space: pre-wrap; margin-top: 14px; }
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+    padding: 3px 8px; border-radius: 6px; color: #fff; margin-top: 10px;
+  }
+  .sample { background: var(--sand); color: #8a6a2f; margin-left: 6px; }
+  .link { color: var(--sea); font-weight: 600; }
+
+  /* Pins */
+  .pin {
+    width: 26px; height: 26px; border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.35);
+  }
+  .pin.active { outline: 3px solid var(--coral); }
+  .leaflet-popup-content { font-family: Inter, sans-serif; margin: 10px 14px; }
+  .leaflet-popup-content b { font-family: Fraunces, serif; font-size: 15px; }
+
+  /* Share modal */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(11, 34, 51, .55);
+    display: none; align-items: center; justify-content: center; z-index: 2000; padding: 16px;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--card); border-radius: 18px; box-shadow: var(--shadow);
+    width: 560px; max-width: 100%; max-height: 92vh; overflow-y: auto; padding: 22px 24px;
+  }
+  .modal h2 { font-size: 22px; }
+  .modal .intro { color: var(--ink-soft); font-size: 14px; line-height: 1.5; margin: 6px 0 16px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 5px; }
+  label small { font-weight: 400; color: var(--ink-soft); }
+  input, textarea, select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+    font: 14px Inter, sans-serif; color: var(--ink); background: #fff;
+  }
+  textarea { min-height: 150px; resize: vertical; line-height: 1.5; }
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; }
+  #pickMap { height: 220px; border-radius: 10px; border: 1px solid var(--line); }
+  .hint { font-size: 12px; color: var(--ink-soft); margin-top: 5px; }
+  .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .err { color: #c0392b; font-size: 13px; margin-top: 10px; min-height: 1em; }
+
+  /* Phone */
+  @media (max-width: 760px) {
+    header { padding: 10px 16px; }
+    header p { display: none; }
+    header h1 { font-size: 18px; }
+    main { flex-direction: column; }
+    #map { flex: none; height: 45vh; }
+    aside { width: 100%; border-left: 0; border-top: 1px solid var(--line); flex: 1; }
+    .row { flex-direction: column; gap: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="logo">🌊</span>
+    <div>
+      <h1>SailKind Global Voices</h1>
+      <p>Ocean conservation stories from communities around the world</p>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn" id="shareBtn">+ Share your story</button>
+</header>
+
+<main>
+  <div id="map"></div>
+  <aside>
+    <div class="panel-head" id="panelHead">
+      <h2>Stories from the sea</h2>
+      <div class="count" id="count">Loading…</div>
+      <input id="search" type="search" placeholder="Search places, people, topics…">
+      <div class="filters" id="filters"></div>
+    </div>
+    <div id="list"></div>
+    <div id="detail"></div>
+  </aside>
+</main>
+
+<div class="overlay" id="overlay">
+  <form class="modal" id="form" novalidate>
+    <h2>Share your ocean story</h2>
+    <p class="intro">
+      Tell the world what your community is doing for the ocean. When you submit, you'll be taken
+      to GitHub to post it (you'll need a free GitHub account). A moderator reviews each story,
+      then it appears on the map.
+    </p>
+
+    <label>Story title</label>
+    <input name="title" maxlength="100" placeholder="e.g. Replanting mangroves in our bay">
+
+    <div class="row">
+      <div>
+        <label>Your name <small>(or a pen name)</small></label>
+        <input name="name" maxlength="80">
+      </div>
+      <div>
+        <label>Community or group <small>(optional)</small></label>
+        <input name="community" maxlength="100">
+      </div>
+    </div>
+
+    <label>Where did this happen?</label>
+    <input name="place" maxlength="120" placeholder="Town, region, country">
+    <div id="pickMap" style="margin-top:8px"></div>
+    <div class="hint" id="pickHint">Click the map to drop your pin.</div>
+
+    <label>Topic</label>
+    <select name="topic"></select>
+
+    <label>Your story</label>
+    <textarea name="story" maxlength="4000" placeholder="What happened? Who was involved? What changed?"></textarea>
+
+    <label>Photo link <small>(optional — a direct https:// link to an image)</small></label>
+    <input name="photo" type="url" placeholder="https://…">
+
+    <label>Learn more link <small>(optional — your group's website or social page)</small></label>
+    <input name="link" type="url" placeholder="https://…">
+
+    <div class="err" id="formErr"></div>
+    <div class="actions">
+      <button type="button" class="btn ghost" id="cancelBtn">Cancel</button>
+      <button type="submit" class="btn">Continue to GitHub →</button>
+    </div>
+  </form>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ---- Settings ------------------------------------------------------------
+// The GitHub repo this site lives in. Story submissions become issues here.
+const REPO = "Jacobalicious/sailkind-global-voices";
+
+const TOPICS = {
+  "Coral & reefs":        "#ff7a59",
+  "Plastic & cleanups":   "#3a86ff",
+  "Fisheries":            "#2a9d8f",
+  "Mangroves & coasts":   "#6a994e",
+  "Marine wildlife":      "#8338ec",
+  "Climate & ocean":      "#e63946",
+  "Education & culture":  "#f4a261",
+  "Other":                "#577590",
+};
+
+// ---- Helpers -------------------------------------------------------------
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const safeUrl = u => /^https:\/\/[^\s"'<>]+$/i.test(u || "") ? u : "";
+const colorOf = t => TOPICS[t] || TOPICS.Other;
+
+// ---- Main map ------------------------------------------------------------
+const map = L.map("map", { worldCopyJump: true, minZoom: 2 }).setView([15, 10], 2);
+// Esri's ocean basemap: shows sea-floor depth, which suits an ocean site.
+const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/";
+const tiles = () => L.layerGroup([
+  L.tileLayer(ESRI + "World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", {
+    attribution: "Tiles &copy; Esri &mdash; GEBCO, NOAA, National Geographic, and other contributors",
+    maxNativeZoom: 13, maxZoom: 16,
+  }),
+  L.tileLayer(ESRI + "World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}", { maxNativeZoom: 13, maxZoom: 16 }),
+]);
+tiles().addTo(map);
+
+let stories = [];
+let activeTopic = null;
+let activeId = null;
+const markers = {};
+
+function pinIcon(topic, active) {
+  return L.divIcon({
+    className: "",
+    html: `<div class="pin${active ? " active" : ""}" style="background:${colorOf(topic)}"></div>`,
+    iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -24],
+  });
+}
+
+function visible() {
+  const q = $("#search").value.trim().toLowerCase();
+  return stories.filter(s =>
+    (!activeTopic || s.topic === activeTopic) &&
+    (!q || [s.title, s.place, s.name, s.community, s.story, s.topic].join(" ").toLowerCase().includes(q)));
+}
+
+function render() {
+  const vis = visible();
+  const ids = new Set(vis.map(s => s.id));
+  for (const s of stories) {
+    const m = markers[s.id];
+    if (ids.has(s.id)) { if (!map.hasLayer(m)) m.addTo(map); }
+    else if (map.hasLayer(m)) m.remove();
+  }
+  $("#count").textContent = `${vis.length} ${vis.length === 1 ? "story" : "stories"} from ${new Set(vis.map(s => s.country || s.place)).size} places`;
+  $("#list").innerHTML = vis.map(s => `
+    <div class="item${s.id === activeId ? " active" : ""}" data-id="${esc(s.id)}">
+      <span class="dot" style="background:${colorOf(s.topic)}"></span>
+      <div>
+        <h3>${esc(s.title)}</h3>
+        <div class="meta">${esc(s.place)} · ${esc(s.name)}</div>
+      </div>
+    </div>`).join("") || `<p style="padding:16px;color:var(--ink-soft)">No stories match yet. Be the first!</p>`;
+}
+
+function renderFilters() {
+  const used = [...new Set(stories.map(s => s.topic))].filter(t => TOPICS[t]);
+  $("#filters").innerHTML = [`<button class="chip${!activeTopic ? " on" : ""}" data-topic="">All</button>`]
+    .concat(used.map(t => `<button class="chip${t === activeTopic ? " on" : ""}" data-topic="${esc(t)}">${esc(t)}</button>`))
+    .join("");
+}
+
+function openStory(id, fly = true) {
+  const s = stories.find(x => x.id === id);
+  if (!s) return;
+  if (activeId && markers[activeId]) markers[activeId].setIcon(pinIcon(stories.find(x => x.id === activeId).topic, false));
+  activeId = id;
+  markers[id].setIcon(pinIcon(s.topic, true));
+  if (fly) map.flyTo([s.lat, s.lng], Math.max(map.getZoom(), 5), { duration: 1.2 });
+
+  const photo = safeUrl(s.photo);
+  const link = safeUrl(s.link);
+  $("#detail").innerHTML = `
+    ${photo ? `<img class="hero" src="${esc(photo)}" alt="" onerror="this.remove()">` : ""}
+    <div class="body">
+      <button class="btn ghost back" id="backBtn">← All stories</button>
+      <h2>${esc(s.title)}</h2>
+      <div class="where">📍 ${esc(s.place)}</div>
+      <div class="who">Shared by ${esc(s.name)}${s.community ? ` · ${esc(s.community)}` : ""}${s.date ? ` · ${esc(s.date)}` : ""}</div>
+      <span class="tag" style="background:${colorOf(s.topic)}">${esc(s.topic)}</span>${s.sample ? `<span class="tag sample">Sample story</span>` : ""}
+      <div class="story">${esc(s.story)}</div>
+      ${link ? `<p><a class="link" href="${esc(link)}" target="_blank" rel="noopener">Learn more →</a></p>` : ""}
+    </div>`;
+  $("#panelHead").style.display = "none";
+  $("#list").style.display = "none";
+  $("#detail").classList.add("open");
+  $("#detail").scrollTop = 0;
+  $("#backBtn").onclick = closeStory;
+  history.replaceState(null, "", "#" + encodeURIComponent(id));
+}
+
+function closeStory() {
+  if (activeId && markers[activeId]) markers[activeId].setIcon(pinIcon(stories.find(x => x.id === activeId).topic, false));
+  activeId = null;
+  $("#detail").classList.remove("open");
+  $("#panelHead").style.display = "";
+  $("#list").style.display = "";
+  history.replaceState(null, "", location.pathname);
+  render();
+}
+
+$("#list").addEventListener("click", e => {
+  const item = e.target.closest(".item");
+  if (item) openStory(item.dataset.id);
+});
+$("#filters").addEventListener("click", e => {
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  activeTopic = chip.dataset.topic || null;
+  renderFilters(); render();
+});
+$("#search").addEventListener("input", render);
+
+fetch("stories.json", { cache: "no-cache" })
+  .then(r => r.json())
+  .then(data => {
+    stories = data.filter(s => isFinite(s.lat) && isFinite(s.lng));
+    for (const s of stories) {
+      markers[s.id] = L.marker([s.lat, s.lng], { icon: pinIcon(s.topic), title: s.title })
+        .bindTooltip(`<b>${esc(s.title)}</b><br>${esc(s.place)}`, { direction: "top", offset: [0, -24] })
+        .on("click", () => openStory(s.id, false));
+    }
+    renderFilters(); render();
+    const fromHash = decodeURIComponent(location.hash.slice(1));
+    if (fromHash) openStory(fromHash);
+  })
+  .catch(() => { $("#count").textContent = "Couldn't load stories right now."; });
+
+// ---- Share form ----------------------------------------------------------
+const form = $("#form");
+form.topic.innerHTML = Object.keys(TOPICS).map(t => `<option>${esc(t)}</option>`).join("");
+
+let pickMap, pickMarker, picked = null;
+function openForm() {
+  $("#overlay").classList.add("open");
+  $("#formErr").textContent = "";
+  if (!pickMap) {
+    pickMap = L.map("pickMap", { worldCopyJump: true }).setView([15, 10], 1);
+    tiles().addTo(pickMap);
+    pickMap.on("click", e => {
+      const ll = e.latlng.wrap();
+      picked = { lat: +ll.lat.toFixed(4), lng: +ll.lng.toFixed(4) };
+      if (pickMarker) pickMarker.setLatLng(ll);
+      else pickMarker = L.marker(ll, { icon: pinIcon(form.topic.value) }).addTo(pickMap);
+      $("#pickHint").textContent = `Pin dropped at ${picked.lat}, ${picked.lng}. Click again to move it.`;
+    });
+  }
+  setTimeout(() => pickMap.invalidateSize(), 50);
+}
+function closeForm() { $("#overlay").classList.remove("open"); }
+
+$("#shareBtn").onclick = openForm;
+$("#cancelBtn").onclick = closeForm;
+$("#overlay").addEventListener("click", e => { if (e.target.id === "overlay") closeForm(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeForm(); });
+form.topic.addEventListener("change", () => pickMarker && pickMarker.setIcon(pinIcon(form.topic.value)));
+
+form.addEventListener("submit", e => {
+  e.preventDefault();
+  const f = Object.fromEntries(new FormData(form));
+  for (const k in f) f[k] = f[k].trim();
+  const missing = [];
+  if (!f.title) missing.push("a title");
+  if (!f.name) missing.push("your name");
+  if (!f.place) missing.push("the place");
+  if (!picked) missing.push("a pin on the map");
+  if (f.story.length < 40) missing.push("a story (at least a few sentences)");
+  if (f.photo && !safeUrl(f.photo)) missing.push("a photo link starting with https://");
+  if (f.link && !safeUrl(f.link)) missing.push("a website link starting with https://");
+  if (missing.length) { $("#formErr").textContent = "Please add " + missing.join(", ") + "."; return; }
+
+  // Opens GitHub's "new issue" page with the story template pre-filled.
+  const params = new URLSearchParams({
+    template: "story.yml",
+    title: "Story: " + f.title,
+    "story-title": f.title,
+    name: f.name,
+    community: f.community,
+    place: f.place,
+    coordinates: `${picked.lat}, ${picked.lng}`,
+    topic: f.topic,
+    story: f.story,
+    photo: f.photo,
+    link: f.link,
+  });
+  window.open(`https://github.com/${REPO}/issues/new?${params}`, "_blank", "noopener");
+  $("#formErr").textContent = "";
+  $("#pickHint").textContent = "Thanks! Finish posting in the GitHub tab that just opened.";
+});
+</script>
+</body>
+</html>

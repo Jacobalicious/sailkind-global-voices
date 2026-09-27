@@ -1,0 +1,63 @@
+name: Share an ocean story
+description: Add your community's ocean conservation story to the map.
+title: "Story: "
+labels: ["story"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing! A moderator will review your story. Once it's approved it will appear on the map automatically.
+  - type: input
+    id: story-title
+    attributes:
+      label: Story title
+    validations:
+      required: true
+  - type: input
+    id: name
+    attributes:
+      label: Your name
+      description: Or a pen name.
+    validations:
+      required: true
+  - type: input
+    id: community
+    attributes:
+      label: Community or group
+  - type: input
+    id: place
+    attributes:
+      label: Place
+      description: Town, region, country.
+    validations:
+      required: true
+  - type: input
+    id: coordinates
+    attributes:
+      label: Coordinates
+      description: "Latitude, longitude — e.g. 10.54, -83.5. The website fills this in when you click the map."
+    validations:
+      required: true
+  - type: input
+    id: topic
+    attributes:
+      label: Topic
+      description: "One of: Coral & reefs, Plastic & cleanups, Fisheries, Mangroves & coasts, Marine wildlife, Climate & ocean, Education & culture, Other"
+    validations:
+      required: true
+  - type: textarea
+    id: story
+    attributes:
+      label: Your story
+    validations:
+      required: true
+  - type: input
+    id: photo
+    attributes:
+      label: Photo link
+      description: Optional. A direct https:// link to an image.
+  - type: input
+    id: link
+    attributes:
+      label: Learn more link
+      description: Optional. Your group's website or social page.
