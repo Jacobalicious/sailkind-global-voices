@@ -118,8 +118,16 @@
 </main>
 <div id="toast"></div>
 
+<script>
+// Show any script error on the page instead of hanging on "Loading…".
+window.onerror = (msg, src, line) => {
+  document.getElementById("editor").innerHTML =
+    '<div class="empty">Something broke: ' + String(msg).replace(/[<>&]/g, "") + " (line " + line + ")</div>";
+};
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
+// Note: avoid a regex ending in a slash — Google's page processing treats the double slash as a comment.
 const TOPICS = ["Coral & reefs", "Plastic & cleanups", "Fisheries", "Mangroves & coasts",
   "Marine wildlife", "Climate & ocean", "Education & culture", "Other"];
 const TOPIC_WORDS = [
@@ -157,14 +165,19 @@ function toast(html, isErr) {
 }
 
 async function load(keepKey) {
+  const slow = setTimeout(() => {
+    if (!items.length) $("#editor").innerHTML = '<div class="empty">Still loading… If this stays stuck, reload the page.</div>';
+  }, 20000);
   try {
     const res = await server("listResponses");
+    clearTimeout(slow);
     items = res.items; site = res.site;
     $("#siteLink").href = site + "?dev";
     renderTabs();
     const still = items.find(i => i.key === keepKey && i.status === view);
     select(still ? still.key : (items.find(i => i.status === view) || {}).key);
   } catch (e) {
+    clearTimeout(slow);
     $("#editor").innerHTML = `<div class="empty">Couldn't load responses: ${esc(e.message)}</div>`;
   }
 }
@@ -296,7 +309,7 @@ function select(key) {
     try {
       const f = await server("filePreview", id);
       if (f.image) box.querySelector("img").src = f.image; else box.querySelector("img").remove();
-      const isImg = /^image\//.test(f.type);
+      const isImg = f.type.startsWith("image" + "/");
       box.querySelector(".info").innerHTML = `
         <b>${esc(f.name)}</b> <a href="${esc(f.url)}" target="_blank" rel="noopener">open ↗</a>
         ${n === 0 && isImg ? `
