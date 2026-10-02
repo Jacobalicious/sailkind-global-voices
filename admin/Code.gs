@@ -131,7 +131,7 @@ function listResponses() {
 
     return {
       key,
-      status: (g(r, "status") || "pending").toLowerCase(),
+      status: readStatus_(g(r, "status")),
       private: {
         fullName: [g(r, "first"), g(r, "last")].filter(Boolean).join(" "),
         emails: [...new Set(col.emails.map(i => (r[i] || "").trim()).filter(Boolean))],
@@ -148,6 +148,16 @@ function listResponses() {
   return { items: items.reverse(), site: SITE };  // newest first
 }
 
+// What each button writes into the "Review status" column. The tabs on the page are
+// named after these, so the wording has to match on both sides.
+const ACTION_STATUS = { approve: "approved", deny: "denied", pending: "pending" };
+
+// Reads the column back, forgiving older rows that were written as "deny"/"approve".
+function readStatus_(raw) {
+  const v = String(raw || "").trim().toLowerCase();
+  return ACTION_STATUS[v] || v || "pending";
+}
+
 // action: "approve" | "save" | "deny" | "pending"
 function saveResponse(key, action, story) {
   const lock = LockService.getDocumentLock();
@@ -161,7 +171,8 @@ function saveResponse(key, action, story) {
     const rowNum = i + 2;
     const row = sh.getRange(rowNum, 1, 1, sh.getLastColumn()).getDisplayValues()[0];
 
-    const status = action === "save" ? (row[col.status] || "pending").toLowerCase() : (action === "approve" ? "approved" : action);
+    const status = action === "save" ? readStatus_(row[col.status]) : ACTION_STATUS[action];
+    if (!status) throw new Error("Don't know what to do with: " + action);
     sh.getRange(rowNum, col.status + 1).setValue(status);
 
     const ps = publicSheet_();

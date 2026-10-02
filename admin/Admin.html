@@ -388,7 +388,7 @@ const DEMO = (() => {
     filePreview: () => ({ name: "beach.jpg", type: "image/jpeg", url: "#", image: "" }),
     saveResponse: (key, action, story) => {
       const it = items.find(i => i.key === key);
-      it.status = action === "save" ? it.status : action === "approve" ? "approved" : action;
+      it.status = action === "save" ? it.status : { approve: "approved", deny: "denied", pending: "pending" }[action];
       if (it.status === "approved") it.current = story;
       return { status: it.status };
     },
