@@ -58,9 +58,43 @@
 
   /* Layout */
   main { flex: 1; display: flex; min-height: 0; position: relative; }
-  /* Matches the open-ocean colour of the map tiles, so gaps while loading blend in. */
-  #map, #pickMap { background: #7fa5d2; }
-  #map { flex: 1; }
+  /* Deep-water gradient: if a tile is ever late, what shows through still reads as ocean. */
+  #map, #pickMap {
+    background: radial-gradient(130% 100% at 50% 0%, #1d6180 0%, #11455e 45%, #072a3d 100%);
+  }
+  #map { flex: 1; position: relative; }
+  /* A faint grain over the whole map, so open water reads as paper-and-ink chart
+     rather than a dead flat fill where the sea-floor data runs out. */
+  #map::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 449;
+    opacity: .09; mix-blend-mode: overlay; background-size: 200px 200px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  /* Soft inner edge, so the map sits in the page instead of being a hard-cut rectangle. */
+  #map::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 450;
+    box-shadow: inset 0 0 70px rgba(7, 42, 61, .30), inset 0 0 0 1px rgba(7, 42, 61, .14);
+  }
+  /* Coarse world tiles sitting under the detailed ones, muted so the sharp layer leads. */
+  .tile-underlay { filter: saturate(.8) brightness(1.03); }
+
+  /* Map chrome */
+  .leaflet-container { font-family: Inter, system-ui, sans-serif; }
+  .leaflet-control-zoom { border: 0 !important; border-radius: 12px; overflow: hidden; box-shadow: 0 6px 18px rgba(7, 42, 61, .28); }
+  .leaflet-control-zoom a {
+    width: 34px; height: 34px; line-height: 32px; font-size: 19px;
+    background: rgba(255, 255, 255, .94); color: var(--sea-deep); border-bottom: 1px solid var(--line);
+  }
+  .leaflet-control-zoom a:hover { background: #fff; color: var(--sea); }
+  .leaflet-control-attribution {
+    background: rgba(255, 255, 255, .78) !important; color: var(--ink-soft);
+    font-size: 11px; padding: 3px 8px; border-radius: 8px 0 0 0;
+  }
+  .leaflet-control-attribution a { color: var(--sea); }
+  .leaflet-control-scale-line {
+    background: rgba(255, 255, 255, .78); border-color: rgba(7, 42, 61, .35);
+    color: var(--ink-soft); font-size: 11px; border-radius: 4px;
+  }
   aside {
     width: 380px; max-width: 100%;
     background: var(--card);
@@ -113,12 +147,19 @@
   .link { color: var(--sea); font-weight: 600; }
 
   /* Pins */
-  .pin {
-    width: 26px; height: 26px; border-radius: 50% 50% 50% 0;
-    transform: rotate(-45deg);
-    border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.35);
+  .pin-wrap { width: 28px; height: 36px; position: relative; transition: transform .18s ease; }
+  .pin-wrap:hover { transform: translateY(-3px); }
+  .pin-shadow {
+    position: absolute; left: 50%; bottom: 1px; width: 14px; height: 5px; margin-left: -7px;
+    border-radius: 50%; background: rgba(7, 42, 61, .45); filter: blur(1.5px);
   }
-  .pin.active { outline: 3px solid var(--coral); }
+  .pin {
+    position: absolute; left: 1px; top: 1px; width: 26px; height: 26px;
+    border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+    border: 3px solid #fff; box-shadow: 0 3px 8px rgba(7, 42, 61, .40);
+  }
+  .pin-wrap.active { z-index: 1000; }
+  .pin-wrap.active .pin { box-shadow: 0 0 0 4px rgba(255, 122, 89, .55), 0 3px 8px rgba(7, 42, 61, .40); }
   .leaflet-popup-content { font-family: Inter, sans-serif; margin: 10px 14px; }
   .leaflet-popup-content b { font-family: Fraunces, serif; font-size: 15px; }
 
@@ -295,15 +336,23 @@ lockToWorld(map);
 // Esri's ocean basemap: shows sea-floor depth, which suits an ocean site.
 const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/";
 const tiles = () => L.layerGroup([
+  // A coarse copy of the world underneath everything. These few tiles load once and get
+  // stretched to fit any zoom, so panning and zooming shows blurry ocean, never bare background.
+  L.tileLayer(ESRI + "World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", {
+    maxNativeZoom: 3, maxZoom: 16, keepBuffer: 32, updateWhenIdle: false,
+    className: "tile-underlay", zIndex: 1,
+  }),
   L.tileLayer(ESRI + "World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", {
     attribution: "Tiles &copy; Esri &mdash; GEBCO, NOAA, National Geographic, and other contributors",
     maxNativeZoom: 13, maxZoom: 16,
     keepBuffer: 6,          // keep more tiles around the edges so dragging reveals map, not gaps
     updateWhenIdle: false,  // start loading new tiles while still dragging
+    zIndex: 2,
   }),
-  L.tileLayer(ESRI + "World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}", { maxNativeZoom: 13, maxZoom: 16, keepBuffer: 6, updateWhenIdle: false }),
+  L.tileLayer(ESRI + "World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}", { maxNativeZoom: 13, maxZoom: 16, keepBuffer: 6, updateWhenIdle: false, zIndex: 3 }),
 ]);
 tiles().addTo(map);
+L.control.scale({ imperial: false, position: "bottomleft" }).addTo(map);
 
 let stories = [];
 let activeTopic = null;
@@ -313,8 +362,10 @@ const markers = {};
 function pinIcon(topic, active) {
   return L.divIcon({
     className: "",
-    html: `<div class="pin${active ? " active" : ""}" style="background:${colorOf(topic)}"></div>`,
-    iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -24],
+    html: `<div class="pin-wrap${active ? " active" : ""}">` +
+          `<span class="pin-shadow"></span>` +
+          `<span class="pin" style="background:${colorOf(topic)}"></span></div>`,
+    iconSize: [28, 36], iconAnchor: [14, 33], popupAnchor: [0, -30],
   });
 }
 
@@ -408,7 +459,7 @@ function showStories(data) {
   stories = data.filter(s => isFinite(s.lat) && isFinite(s.lng));
   for (const s of stories) {
     markers[s.id] = L.marker([s.lat, s.lng], { icon: pinIcon(s.topic), title: s.title })
-      .bindTooltip(`<b>${esc(s.title)}</b><br>${esc(s.place)}`, { direction: "top", offset: [0, -24] })
+      .bindTooltip(`<b>${esc(s.title)}</b><br>${esc(s.place)}`, { direction: "top", offset: [0, -30] })
       .on("click", () => openStory(s.id, false));
   }
   renderFilters(); render();
