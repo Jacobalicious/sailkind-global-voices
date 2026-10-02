@@ -541,50 +541,76 @@ form.addEventListener("submit", e => {
 });
 </script>
 <script type="module">
-// Dev preview: add ?dev to the address to see approved form stories straight
-// from the Google sheet, without waiting for the hourly update.
-// (?dev&csv=<link> previews a different sheet link.)
+// Keeps the map current without waiting for the hourly job that writes stories.json.
+// stories.json has already drawn the pins by the time this runs; this reads the
+// approved rows straight from the published Google sheet and folds in anything newer.
+// Add ?dev to the address to see what it's doing. (?dev&csv=<link> reads another sheet.)
 import { FORM_CSV, formStories, geocode } from "./form.js";
 
 const params = new URLSearchParams(location.search);
-if (params.has("dev")) {
-  const csvUrl = params.get("csv") || FORM_CSV;
-  const bar = document.getElementById("devBar");
-  const msg = document.getElementById("devMsg");
-  bar.classList.add("on");
-  map.invalidateSize();
+const dev = params.has("dev");
+const csvUrl = params.get("csv") || FORM_CSV;
+const msg = document.getElementById("devMsg");
+if (dev) { document.getElementById("devBar").classList.add("on"); map.invalidateSize(); }
 
-  // Remember looked-up places in this browser so refreshes are quick.
-  const cache = (() => { try { return JSON.parse(localStorage.getItem("placeCache") || "{}"); } catch { return {}; } })();
-  const lookup = async place => {
-    if (!(place in cache)) {
-      msg.textContent = `Finding "${place}" on the map…`;
-      cache[place] = await geocode(place);
-      try { localStorage.setItem("placeCache", JSON.stringify(cache)); } catch {}
-    }
-    return cache[place];
-  };
-
-  async function refresh() {
-    if (!csvUrl) { msg.textContent = "No form sheet link set up yet."; return; }
-    msg.textContent = "Reading the Google Form sheet…";
-    try {
-      const [site, csv] = await Promise.all([
-        storiesLoaded,
-        fetch(csvUrl + (csvUrl.includes("?") ? "&" : "?") + "t=" + Date.now()).then(r => r.text()),
-      ]);
-      const { stories: fromForm, problems } = await formStories(csv, { lookup });
-      showStories([...fromForm, ...site.filter(s => !s.id.startsWith("form-"))]);
-      msg.textContent = `${fromForm.length} approved form ${fromForm.length === 1 ? "story" : "stories"} shown live`
-        + (problems.length ? ` · ⚠️ ${problems.join(" · ")}` : "")
-        + " · The public site catches up within the hour.";
-    } catch (e) {
-      msg.textContent = "Couldn't read the sheet: " + e.message;
-    }
+// Looking a place name up is slow and rate-limited, so visitors never do it: an
+// approved story always has a pin set on the review page. Only the dev preview looks
+// places up, and it remembers what it found in this browser.
+const cache = (() => { try { return JSON.parse(localStorage.getItem("placeCache") || "{}"); } catch { return {}; } })();
+const devLookup = async (place, parts = {}) => {
+  const key = [place, parts.city || "", parts.country || ""].join("|");
+  if (!(key in cache)) {
+    msg.textContent = `Finding "${place}" on the map…`;
+    cache[key] = await geocode(place, parts);
+    try { localStorage.setItem("placeCache", JSON.stringify(cache)); } catch {}
   }
-  document.getElementById("devRefresh").onclick = refresh;
-  refresh();
+  return cache[key];
+};
+
+// Swaps in a new set of stories, but never while someone is reading one.
+let shown = "";
+function apply(data) {
+  const json = JSON.stringify(data);
+  if (json === shown) return "same";
+  if (activeId) return "later";          // a story is open — don't pull it out from under them
+  shown = json;
+  showStories(data);
+  return "updated";
 }
+
+let busy = false;
+async function refresh() {
+  if (busy || !csvUrl) return;
+  busy = true;
+  try {
+    if (dev) msg.textContent = "Reading the Google Form sheet…";
+    const [site, csv] = await Promise.all([
+      storiesLoaded,
+      fetch(csvUrl + (csvUrl.includes("?") ? "&" : "?") + "t=" + Date.now()).then(r => {
+        if (!r.ok) throw new Error("the sheet link returned " + r.status);
+        return r.text();
+      }),
+    ]);
+    const { stories: fromForm, problems } = await formStories(csv, { lookup: dev ? devLookup : async () => null });
+    const what = apply([...fromForm, ...site.filter(s => !s.id.startsWith("form-"))]);
+    if (dev) {
+      msg.textContent = `${fromForm.length} approved form ${fromForm.length === 1 ? "story" : "stories"} `
+        + ({ updated: "just loaded", same: "— no change since last check", later: "waiting (close the open story to see them)" }[what])
+        + (problems.length ? ` · ⚠️ ${problems.join(" · ")}` : "");
+    }
+  } catch (e) {
+    // The site already has stories.json on screen, so a sheet hiccup changes nothing.
+    if (dev) msg.textContent = "Couldn't read the sheet: " + e.message;
+  } finally {
+    busy = false;
+  }
+}
+
+if (dev) document.getElementById("devRefresh").onclick = refresh;
+refresh();
+// Check again every minute while the tab is on screen, and the moment it is opened again.
+setInterval(() => { if (!document.hidden) refresh(); }, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
 </script>
 </body>
 </html>

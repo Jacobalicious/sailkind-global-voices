@@ -37,6 +37,8 @@ const COLUMNS = {
   consent:      h => h.includes("by checking the box"),
   file:         h => h.includes("file to attach"),
   place:        h => h.startsWith("map location"),
+  city:         h => h.startsWith("city") || h.startsWith("town") || h.includes("what city"),
+  country:      h => h.startsWith("country") || h.includes("what country"),
   approved:     h => h.startsWith("approved"),
   // Set by the review page (admin/): overrides for the automatic guesses.
   title:        h => h === "title",
@@ -76,14 +78,59 @@ function idFrom(s) {
   return "form-" + h.toString(36);
 }
 
+// Country names people type that don't match what a map service calls the place.
+// Keys and values have no spaces or punctuation (see normCountry).
+const COUNTRY_ALIASES = {
+  usa: "unitedstates", us: "unitedstates", unitedstatesofamerica: "unitedstates", america: "unitedstates",
+  uk: "unitedkingdom", greatbritain: "unitedkingdom", britain: "unitedkingdom", england: "unitedkingdom",
+  scotland: "unitedkingdom", wales: "unitedkingdom", northernireland: "unitedkingdom",
+  uae: "unitedarabemirates", holland: "netherlands", ivorycoast: "cotedivoire",
+  burma: "myanmar", czechia: "czechrepublic", swaziland: "eswatini", russianfederation: "russia",
+  republicofkorea: "southkorea", unitedrepublicoftanzania: "tanzania", republicofireland: "ireland",
+  peoplesrepublicofchina: "china", cabobverde: "capeverde",
+};
+
+// Boils a country name down to bare letters, so "Côte d'Ivoire", "Cote d Ivoire"
+// and "COTE DIVOIRE" all end up the same.
+export function normCountry(s) {
+  const k = String(s || "").toLowerCase()
+    // NFD splits accents off their letters; dropping everything but a-z then removes them.
+    .normalize("NFD").replace(/[^a-z ]+/g, " ").replace(/\bthe\b/g, " ").replace(/ +/g, "");
+  return COUNTRY_ALIASES[k] || k;
+}
+
+// True when two country names mean the same country. Unknown on either side counts
+// as a match, so a blank answer never holds a story back.
+export function sameCountry(a, b) {
+  const x = normCountry(a), y = normCountry(b);
+  return !x || !y || x === y;
+}
+
 // OpenStreetMap's free place-name lookup. Their rules: at most one request a second.
-export async function geocode(place) {
-  const url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(place);
-  const res = await fetch(url, { headers: typeof window === "undefined"
-    ? { "User-Agent": "sailkind-global-voices (github.com/Jacobalicious/sailkind-global-voices)" } : {} });
-  await new Promise(r => setTimeout(r, 1100));
-  const [hit] = res.ok ? await res.json() : [];
-  return hit ? { lat: +(+hit.lat).toFixed(4), lng: +(+hit.lon).toFixed(4) } : null;
+// When the form gave city and country as separate answers we search on those fields
+// directly, which is far less likely to land on a same-named town in another country
+// than searching one line of free text.
+export async function geocode(place, { city = "", country = "" } = {}) {
+  const tries = [];
+  if (city && country) tries.push({ city, country });
+  if (place) tries.push({ q: place });
+  if (!tries.length && country) tries.push({ country });
+
+  for (const fields of tries) {
+    const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&"
+      + new URLSearchParams(fields);
+    const res = await fetch(url, { headers: typeof window === "undefined"
+      ? { "User-Agent": "sailkind-global-voices (github.com/Jacobalicious/sailkind-global-voices)" } : {} });
+    await new Promise(r => setTimeout(r, 1100));
+    const [hit] = res.ok ? await res.json() : [];
+    if (hit) return {
+      lat: +(+hit.lat).toFixed(4),
+      lng: +(+hit.lon).toFixed(4),
+      country: (hit.address && hit.address.country) || "",
+      label: hit.display_name || "",
+    };
+  }
+  return null;
 }
 
 // known: earlier form stories by id, so unchanged places aren't looked up again.
@@ -105,14 +152,24 @@ export async function formStories(csvText, { known = {}, lookup = geocode } = {}
     if (get("approved").toLowerCase() !== "yes") continue;
 
     const id = idFrom(get("timestamp"));
-    const place = get("place");
     const name = get("name") || "A SailKind voice";
-    if (!place) { problems.push(`${name}: no Map location filled in`); continue; }
+    // The reviewer's "Map location" wins; otherwise build one from the city and
+    // country answers on the form.
+    const city = get("city"), said = get("country");
+    const place = get("place") || [city, said].filter(Boolean).join(", ");
+    if (!place) { problems.push(`${name}: no city, country or map location filled in`); continue; }
 
     const lat = parseFloat(get("lat")), lng = parseFloat(get("lng"));
     const pos = isFinite(lat) && isFinite(lng) ? { lat, lng }
-      : known[id]?.place === place ? { lat: known[id].lat, lng: known[id].lng } : await lookup(place);
+      : known[id]?.place === place ? { lat: known[id].lat, lng: known[id].lng }
+      : await lookup(place, { city, country: said });
     if (!pos) { problems.push(`${name}: couldn't find "${place}" on the map. Try "City, Country".`); continue; }
+    // A pin in the wrong country is worse than no pin: hold the story back and say so.
+    if (said && pos.country && !sameCountry(said, pos.country)) {
+      problems.push(`${name}: "${place}" came back in ${pos.country}, but they said ${said}. `
+        + `Set the pin by hand on the review page.`);
+      continue;
+    }
 
     const d = new Date(get("timestamp"));
     const sections = [
@@ -126,11 +183,12 @@ export async function formStories(csvText, { known = {}, lookup = geocode } = {}
 
     stories.push({
       id,
-      title: get("title") || `${name} · ${place.split(",")[0].trim()}`,
+      title: get("title") || `${name} · ${city || place.split(",")[0].trim()}`,
       name,
       community: "",
       place,
-      country: place.split(",").pop().trim(),
+      city: city || place.split(",")[0].trim(),
+      country: said || pos.country || place.split(",").pop().trim(),
       ...pos,
       topic: get("topic") || topicFrom(get("issues")),
       date: isNaN(d) ? "" : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,

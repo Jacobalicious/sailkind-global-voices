@@ -64,6 +64,7 @@
   .row { display: flex; gap: 12px; }
   .row > * { flex: 1; }
   .placeRow { display: flex; gap: 8px; }
+  .warn { color: #c0392b; }
   .placeRow input { flex: 1; }
   #pickMap { height: 240px; border-radius: 10px; border: 1px solid var(--line); margin-top: 8px; background: #7fa5d2; }
   .hint { font-size: 12px; color: var(--ink-soft); margin-top: 5px; }
@@ -209,6 +210,7 @@ function select(key) {
   const it = items.find(i => i.key === key);
   if (!it) { $("#editor").innerHTML = `<div class="empty">${view === "pending" ? "All caught up — no stories waiting. 🎉" : "Nothing here."}</div>`; pickMap = null; return; }
   const c = it.current, p = it.private;
+  const said = it.said || {};                       // the city / country they typed on the form
   const minor = p.under18.toLowerCase().startsWith("y");
 
   $("#editor").innerHTML = `
@@ -238,6 +240,9 @@ function select(key) {
       <button class="btn ghost" id="findBtn" type="button">Find</button>
     </div>
     <div id="pickMap"></div>
+    <div class="hint">${said.city || said.country
+      ? `They wrote: <b>${esc([said.city, said.country].filter(Boolean).join(", "))}</b>`
+      : "They didn't give a city or country."}</div>
     <div class="hint" id="pinHint">${c.lat !== "" && c.lat != null ? "Pin set." : "No pin yet."}</div>
 
     <label>Topic <small>(colour of the pin)</small></label>
@@ -286,10 +291,15 @@ function select(key) {
     const place = $("#f-place").value.trim(); if (!place) return;
     $("#pinHint").textContent = "Looking it up…";
     try {
-      const hit = await server("locate", place);
+      const hit = await server("locate", place, said.country || "");
       if (!hit) { $("#pinHint").textContent = `Couldn't find "${place}". Try "City, Country", or click the map.`; return; }
       setPin(hit, 7);
-      $("#pinHint").textContent = `Found: ${hit.label}. Click the map to move the pin if it's not quite right.`;
+      // The pin landing in a different country from the one they named is almost
+      // always a same-named town somewhere else, so say so loudly.
+      $("#pinHint").innerHTML = hit.countryOk === false
+        ? `<b class="warn">That looks wrong.</b> ${esc(place)} came back in <b>${esc(hit.country)}</b>, `
+          + `but they said <b>${esc(said.country)}</b>. Click the map to put the pin in the right place.`
+        : `Found: ${esc(hit.label)}. Click the map to move the pin if it's not quite right.`;
     } catch (e) { $("#pinHint").textContent = "Lookup failed: " + e.message; }
   };
   $("#findBtn").onclick = find;
@@ -362,15 +372,19 @@ const DEMO = (() => {
   const items = [
     { key: "9/27/2026 9:21:32", status: "pending", consent: true, fileIds: ["demo1"],
       private: { fullName: "Alex Example", emails: ["alex@example.com"], pronouns: "they/them", under18: "No" },
+      said: { city: "Valparaiso", country: "Chile" },
       original: { name: "Alex", place: "Valparaiso, Chile", about: "I grew up on the coast and learned to swim before I could ride a bike.", relationship: "Most families here fish or work at the port.", issue: "Plastic washes up after every storm.", doing: "A weekly beach cleanup run by the school.", wish: "We are small but we care a lot.", issues: "Plastic pollution, Overfishing" } },
     { key: "9/26/2026 14:02:10", status: "pending", consent: false, fileIds: [],
       private: { fullName: "Sam Sample", emails: ["sam@example.com"], pronouns: "", under18: "Yes" },
+      said: { city: "Boracay", country: "Philippines" },
       original: { name: "Sam", place: "", about: "Student who loves reefs.", relationship: "Tourism and fishing.", issue: "Coral bleaching.", doing: "Reef monitoring club.", wish: "Reefs are our livelihood.", issues: "Coral reef damage" } },
   ];
   items.forEach(i => i.current = Object.assign({ title: "", lat: "", lng: "", topic: "", showPhoto: false }, i.original));
   return {
     listResponses: () => ({ items: JSON.parse(JSON.stringify(items)), site: "https://jacobalicious.github.io/sailkind-global-voices/" }),
-    locate: p => /chile/i.test(p) ? { lat: -33.0472, lng: -71.6127, label: "Valparaíso, Chile" } : null,
+    locate: (p, expect) => /chile/i.test(p)
+      ? { lat: -33.0472, lng: -71.6127, label: "Valparaíso, Chile", country: "Chile", countryOk: !expect || /chile/i.test(expect) }
+      : { lat: 41.9028, lng: 12.4964, label: "Boracay, Italy (demo mismatch)", country: "Italy", countryOk: false },
     filePreview: () => ({ name: "beach.jpg", type: "image/jpeg", url: "#", image: "" }),
     saveResponse: (key, action, story) => {
       const it = items.find(i => i.key === key);

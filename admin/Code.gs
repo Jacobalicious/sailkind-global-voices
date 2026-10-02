@@ -32,6 +32,8 @@ const RESPONSE_FIELDS = {
   file:         h => h.includes("file to attach"),
   under18:      h => h.includes("under 18"),
   place:        h => h.startsWith("map location"),
+  city:         h => h.startsWith("city") || h.startsWith("town") || h.includes("what city"),
+  country:      h => h.startsWith("country") || h.includes("what country"),
   status:       h => h.startsWith("review status"),
 };
 
@@ -110,9 +112,11 @@ function listResponses() {
   const items = rows.filter(r => g(r, "timestamp")).map(r => {
     const key = g(r, "timestamp");
     const p = pub[key];
+    const city = g(r, "city"), country = g(r, "country");
     const original = {
       name: g(r, "name") || g(r, "first"),
-      place: g(r, "place"),
+      // Whatever they typed as a map location, else the city and country answers.
+      place: g(r, "place") || [city, country].filter(Boolean).join(", "),
       about: g(r, "about"), relationship: g(r, "relationship"), issue: g(r, "issue"),
       doing: g(r, "doing"), wish: g(r, "wish"), issues: g(r, "issues"),
     };
@@ -135,6 +139,7 @@ function listResponses() {
         under18: g(r, "under18"),
       },
       consent: !!g(r, "consent"),
+      said: { city: city, country: country },   // what they answered, for checking the pin against
       fileIds: (g(r, "file").match(/[?&]id=[\w-]+|\/d\/[\w-]+/g) || []).map(driveId_),
       current,
       original,
@@ -193,12 +198,48 @@ function saveResponse(key, action, story) {
   }
 }
 
-// Place name -> coordinates, using Google's geocoder.
-function locate(place) {
+// Country names people type that don't match what a map service calls the place.
+// Keys and values have no spaces or punctuation (see normCountry_).
+const COUNTRY_ALIASES = {
+  usa: "unitedstates", us: "unitedstates", unitedstatesofamerica: "unitedstates", america: "unitedstates",
+  uk: "unitedkingdom", greatbritain: "unitedkingdom", britain: "unitedkingdom", england: "unitedkingdom",
+  scotland: "unitedkingdom", wales: "unitedkingdom", northernireland: "unitedkingdom",
+  uae: "unitedarabemirates", holland: "netherlands", ivorycoast: "cotedivoire",
+  burma: "myanmar", czechia: "czechrepublic", swaziland: "eswatini", russianfederation: "russia",
+  republicofkorea: "southkorea", unitedrepublicoftanzania: "tanzania", republicofireland: "ireland",
+  peoplesrepublicofchina: "china",
+};
+
+function normCountry_(s) {
+  const k = String(s || "").toLowerCase()
+    .normalize("NFD").replace(/[^a-z ]+/g, " ").replace(/\bthe\b/g, " ").replace(/ +/g, "");
+  return COUNTRY_ALIASES[k] || k;
+}
+
+// Unknown on either side counts as a match, so a blank answer never raises a warning.
+function sameCountry_(a, b) {
+  const x = normCountry_(a), y = normCountry_(b);
+  return !x || !y || x === y;
+}
+
+// Place name -> coordinates, using Google's geocoder. When we know which country they
+// said they're in, the answer is checked against it so a same-named town somewhere
+// else doesn't quietly become their pin.
+function locate(place, expectCountry) {
   const res = Maps.newGeocoder().geocode(place);
   const hit = res.results && res.results[0];
   if (!hit) return null;
-  return { lat: +hit.geometry.location.lat.toFixed(4), lng: +hit.geometry.location.lng.toFixed(4), label: hit.formatted_address };
+  let country = "";
+  (hit.address_components || []).forEach(function (c) {
+    if (c.types.indexOf("country") >= 0) country = c.long_name;
+  });
+  return {
+    lat: +hit.geometry.location.lat.toFixed(4),
+    lng: +hit.geometry.location.lng.toFixed(4),
+    label: hit.formatted_address,
+    country: country,
+    countryOk: sameCountry_(expectCountry, country),
+  };
 }
 
 // A small preview of an uploaded file (the Drive link opens the full thing).
