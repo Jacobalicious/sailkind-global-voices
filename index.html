@@ -123,6 +123,9 @@
   .item .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex: none; }
   .item h3 { font-size: 15px; font-family: Inter, sans-serif; font-weight: 600; }
   .item .meta { color: var(--ink-soft); font-size: 12px; margin-top: 3px; }
+  .item .grow { flex: 1; min-width: 0; }
+  .item .thumb { width: 52px; height: 52px; object-fit: cover; border-radius: 8px; flex: none; background: var(--sand); }
+  .tip-photo { display: block; width: 180px; height: 110px; object-fit: cover; border-radius: 6px; margin-bottom: 6px; background: var(--sand); }
 
   /* Story detail */
   #detail { overflow-y: auto; flex: 1; display: none; }
@@ -388,10 +391,11 @@ function render() {
   $("#list").innerHTML = vis.map(s => `
     <div class="item${s.id === activeId ? " active" : ""}" data-id="${esc(s.id)}">
       <span class="dot" style="background:${colorOf(s.topic)}"></span>
-      <div>
+      <div class="grow">
         <h3>${esc(s.title)}</h3>
         <div class="meta">${esc(s.place)} · ${esc(s.name)}</div>
       </div>
+      ${safeUrl(s.photo) ? `<img class="thumb" src="${esc(safeUrl(s.photo))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}
     </div>`).join("") || `<p style="padding:16px;color:var(--ink-soft)">No stories match yet. Be the first!</p>`;
 }
 
@@ -413,7 +417,7 @@ function openStory(id, fly = true) {
   const photo = safeUrl(s.photo);
   const link = safeUrl(s.link);
   $("#detail").innerHTML = `
-    ${photo ? `<img class="hero" src="${esc(photo)}" alt="" onerror="this.remove()">` : ""}
+    ${photo ? `<img class="hero" src="${esc(photo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}
     <div class="body">
       <button class="btn ghost back" id="backBtn">← All stories</button>
       <h2>${esc(s.title)}</h2>
@@ -459,7 +463,8 @@ function showStories(data) {
   stories = data.filter(s => isFinite(s.lat) && isFinite(s.lng));
   for (const s of stories) {
     markers[s.id] = L.marker([s.lat, s.lng], { icon: pinIcon(s.topic), title: s.title })
-      .bindTooltip(`<b>${esc(s.title)}</b><br>${esc(s.place)}`, { direction: "top", offset: [0, -30] })
+      .bindTooltip(`${safeUrl(s.photo) ? `<img class="tip-photo" src="${esc(safeUrl(s.photo))}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}`
+        + `<b>${esc(s.title)}</b><br>${esc(s.place)}`, { direction: "top", offset: [0, -30] })
       .on("click", () => openStory(s.id, false));
   }
   renderFilters(); render();

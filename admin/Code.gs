@@ -189,7 +189,7 @@ function saveResponse(key, action, story) {
     const showPhoto = !!(story.showPhoto && consent && fileId);
     if (showPhoto) {
       try {
-        DriveApp.getFileById(fileId).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        driveFile_(fileId).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       } catch (e) {
         throw new Error("Couldn't share the photo: " + e.message);
       }
@@ -253,9 +253,23 @@ function locate(place, expectCountry) {
   };
 }
 
+// Form uploads live in the form owner's Drive, in a folder called
+// "<form name> (File responses)". Whoever opens this page needs access to that folder,
+// because the page runs as them. This turns Google's cryptic error into what to do.
+function driveFile_(fileId) {
+  try {
+    return DriveApp.getFileById(fileId);
+  } catch (e) {
+    const who = Session.getActiveUser().getEmail() || "your Google account";
+    throw new Error(`${who} can't open this file. Ask whoever owns the Google Form to open their Drive, `
+      + `find the folder ending in "(File responses)", and share it with ${who} as an Editor. `
+      + `(If you're signed into several Google accounts, the page may also be using the wrong one.)`);
+  }
+}
+
 // A small preview of an uploaded file (the Drive link opens the full thing).
 function filePreview(fileId) {
-  const f = DriveApp.getFileById(fileId);
+  const f = driveFile_(fileId);
   const thumb = f.getThumbnail();
   return {
     name: f.getName(),

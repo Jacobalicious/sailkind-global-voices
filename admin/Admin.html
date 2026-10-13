@@ -327,7 +327,9 @@ function select(key) {
           <span>Show this photo with the story${it.consent ? " <small>(makes the file viewable by anyone with the link)</small>" : " — <b>they didn't tick the media permission box</b>"}</span></label>`
         : `<div class="hint">${isImg ? "Only the first photo is shown on the map." : "Not an image, so it won't show on the map."}</div>`}`;
     } catch (e) {
-      box.querySelector(".info").textContent = "Couldn't load this file: " + e.message;
+      box.querySelector("img").remove();
+      box.querySelector(".info").innerHTML = `<b class="warn">Can't open this photo yet.</b> ${esc(e.message)}
+        <a href="https://drive.google.com/open?id=${encodeURIComponent(id)}" target="_blank" rel="noopener">try opening it in Drive ↗</a>`;
     }
   });
 

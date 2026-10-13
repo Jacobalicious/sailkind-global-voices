@@ -65,10 +65,12 @@ function topicFrom(text) {
 }
 
 // Form uploads are Google Drive links; turn the first into a direct image URL.
-// (Only shows if that file is shared as "Anyone with the link".)
+// (Only shows if that file is shared as "Anyone with the link", which the review page
+// does when you tick "Show this photo".) This address embeds more reliably than
+// drive.google.com/thumbnail, which Google often blocks on other sites.
 function photoFrom(text) {
   const m = /[?&]id=([\w-]+)|\/d\/([\w-]+)/.exec(text || "");
-  return m ? `https://drive.google.com/thumbnail?id=${m[1] || m[2]}&sz=w1600` : "";
+  return m ? `https://lh3.googleusercontent.com/d/${m[1] || m[2]}=w1600` : "";
 }
 
 // Stable id from the response's timestamp.
