@@ -126,7 +126,9 @@ function listResponses() {
       lat: p["Latitude"], lng: p["Longitude"], topic: p["Topic"],
       about: p["Tell me about yourself"], relationship: p["Relationship with the ocean"],
       issue: p["One ocean issue"], doing: p["What is your community doing"],
-      wish: p["Wish people understood"], issues: p["Top 3 issues"], showPhoto: !!p["File to attach"],
+      wish: p["Wish people understood"], issues: p["Top 3 issues"], // Ticked unless a reviewer unticked it ("hidden"). Stories approved before photos
+      // worked have a blank here, and start ticked so re-approving adds their photo.
+      showPhoto: p["File to attach"] !== "hidden",
     } : Object.assign({ title: "", lat: "", lng: "", topic: "", showPhoto: true }, original);
 
     return {
@@ -200,7 +202,8 @@ function saveResponse(key, action, story) {
     const values = [
       key, story.name, story.title, story.place, String(story.lat), String(story.lng), story.topic,
       story.about, story.relationship, story.issue, story.doing, story.wish, story.issues,
-      consent, showPhoto ? "https://drive.google.com/open?id=" + fileId : "", "yes",
+      // "hidden" remembers a deliberate untick; the website finds no file id in it and shows nothing.
+      consent, showPhoto ? "https://drive.google.com/open?id=" + fileId : fileId ? "hidden" : "", "yes",
     ].map(v => String(v == null ? "" : v));
 
     const target = existing ? existing.row : ps.getLastRow() + 1;
