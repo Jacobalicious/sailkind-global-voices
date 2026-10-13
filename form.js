@@ -68,9 +68,9 @@ function topicFrom(text) {
 // (Only shows if that file is shared as "Anyone with the link", which the review page
 // does when you tick "Show this photo".) This address embeds more reliably than
 // drive.google.com/thumbnail, which Google often blocks on other sites.
-function photoFrom(text) {
-  const m = /[?&]id=([\w-]+)|\/d\/([\w-]+)/.exec(text || "");
-  return m ? `https://lh3.googleusercontent.com/d/${m[1] || m[2]}=w1600` : "";
+function photosFrom(text) {
+  return [...String(text || "").matchAll(/[?&]id=([\w-]+)|\/d\/([\w-]+)/g)]
+    .map(m => `https://lh3.googleusercontent.com/d/${m[1] || m[2]}=w1600`);
 }
 
 // Stable id from the response's timestamp.
@@ -196,7 +196,8 @@ export async function formStories(csvText, { known = {}, lookup = geocode } = {}
       date: isNaN(d) ? "" : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
       story: sections.map(([h, v]) => `## ${h}\n${v}`).join("\n\n"),
       // The review page only fills in the file when the reviewer leaves "Show this photo" ticked.
-      photo: photoFrom(get("file")),
+      photo: photosFrom(get("file"))[0] || "",
+      photos: photosFrom(get("file")),
       link: "",
     });
   }

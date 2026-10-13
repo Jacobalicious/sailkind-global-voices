@@ -125,6 +125,8 @@
   .item .meta { color: var(--ink-soft); font-size: 12px; margin-top: 3px; }
   .item .grow { flex: 1; min-width: 0; }
   .item .thumb { width: 52px; height: 52px; object-fit: cover; border-radius: 8px; flex: none; background: var(--sand); }
+  #detail .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 14px; }
+  #detail .gallery img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; display: block; background: var(--sand); }
   .tip-photo { display: block; width: 180px; height: 110px; object-fit: cover; border-radius: 6px; margin-bottom: 6px; background: var(--sand); }
 
   /* Story detail */
@@ -415,6 +417,8 @@ function openStory(id, fly = true) {
   if (fly) map.flyTo([s.lat, s.lng], Math.max(map.getZoom(), 5), { duration: 1.2 });
 
   const photo = safeUrl(s.photo);
+  // The first photo goes up top; any others sit under the story.
+  const more = (s.photos || []).map(safeUrl).filter(u => u && u !== photo);
   const link = safeUrl(s.link);
   $("#detail").innerHTML = `
     ${photo ? `<img class="hero" src="${esc(photo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}
@@ -425,6 +429,7 @@ function openStory(id, fly = true) {
       <div class="who">Shared by ${esc(s.name)}${s.community ? ` · ${esc(s.community)}` : ""}${s.date ? ` · ${esc(s.date)}` : ""}</div>
       <span class="tag" style="background:${colorOf(s.topic)}">${esc(s.topic)}</span>${s.sample ? `<span class="tag sample">Sample story</span>` : ""}
       <div class="story">${esc(s.story).replace(/\n*^## (.*)$\n?/gm, "<h4>$1</h4>")}</div>
+      ${more.length ? `<div class="gallery">${more.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"></a>`).join("")}</div>` : ""}
       ${link ? `<p><a class="link" href="${esc(link)}" target="_blank" rel="noopener">Learn more →</a></p>` : ""}
     </div>`;
   $("#panelHead").style.display = "none";

@@ -312,23 +312,26 @@ function select(key) {
   });
 
   // Photos
-  it.fileIds.forEach(async (id, n) => {
+  // Each file gets its own "Show" box. It's there from the start so saving before the
+  // previews finish loading still keeps the photos ticked.
+  const hidden = c.hiddenPhotos || [];
+  it.fileIds.forEach(async id => {
     const box = document.createElement("div"); box.className = "photo";
-    box.innerHTML = `<img alt=""><div class="info">Loading file…</div>`;
+    box.innerHTML = `<img alt=""><div class="info"><div class="name">Loading file…</div>
+      <label class="check"><input type="checkbox" class="f-photo" data-id="${esc(id)}" ${hidden.includes(id) ? "" : "checked"}>
+      <span>Show this photo with the story <small>(makes the file viewable by anyone with the link)</small></span></label></div>`;
     $("#photos").appendChild(box);
+    const nameEl = box.querySelector(".name");
     try {
       const f = await server("filePreview", id);
       if (f.image) box.querySelector("img").src = f.image; else box.querySelector("img").remove();
-      const isImg = f.type.startsWith("image" + "/");
-      box.querySelector(".info").innerHTML = `
-        <b>${esc(f.name)}</b> <a href="${esc(f.url)}" target="_blank" rel="noopener">open ↗</a>
-        ${n === 0 && isImg ? `
-          <label class="check"><input type="checkbox" id="f-photo" ${c.showPhoto ? "checked" : ""}>
-          <span>Show this photo with the story <small>(makes the file viewable by anyone with the link)</small></span></label>`
-        : `<div class="hint">${isImg ? "Only the first photo is shown on the map." : "Not an image, so it won't show on the map."}</div>`}`;
+      nameEl.innerHTML = `<b>${esc(f.name)}</b> <a href="${esc(f.url)}" target="_blank" rel="noopener">open ↗</a>`;
+      if (!f.type.startsWith("image" + "/")) {
+        box.querySelector(".check").outerHTML = `<div class="hint">Not an image, so it won't show on the map.</div>`;
+      }
     } catch (e) {
       box.querySelector("img").remove();
-      box.querySelector(".info").innerHTML = `<b class="warn">Can't open this photo yet.</b> ${esc(e.message)}
+      nameEl.innerHTML = `<b class="warn">Can't open this photo yet.</b> ${esc(e.message)}
         <a href="https://drive.google.com/open?id=${encodeURIComponent(id)}" target="_blank" rel="noopener">try opening it in Drive ↗</a>`;
     }
   });
@@ -343,7 +346,7 @@ async function act(it, action) {
     place: $("#f-place").value.trim(),
     topic: $("#f-topic").value,
     issues: $("#f-issues").value.trim(),
-    showPhoto: !!($("#f-photo") && $("#f-photo").checked),
+    photos: [...document.querySelectorAll(".f-photo:checked")].map(el => el.dataset.id),
   };
   STORY_FIELDS.forEach(([k]) => story[k] = $("#f-" + k).value.trim());
   const pos = $("#pickMap").getPos();
@@ -381,7 +384,7 @@ const DEMO = (() => {
       said: { city: "Boracay", country: "Philippines" },
       original: { name: "Sam", place: "", about: "Student who loves reefs.", relationship: "Tourism and fishing.", issue: "Coral bleaching.", doing: "Reef monitoring club.", wish: "Reefs are our livelihood.", issues: "Coral reef damage" } },
   ];
-  items.forEach(i => i.current = Object.assign({ title: "", lat: "", lng: "", topic: "", showPhoto: true }, i.original));
+  items.forEach(i => i.current = Object.assign({ title: "", lat: "", lng: "", topic: "", hiddenPhotos: [] }, i.original));
   return {
     listResponses: () => ({ items: JSON.parse(JSON.stringify(items)), site: "https://jacobalicious.github.io/sailkind-global-voices/" }),
     locate: (p, expect) => /chile/i.test(p)

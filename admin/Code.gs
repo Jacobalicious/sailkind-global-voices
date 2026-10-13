@@ -98,6 +98,21 @@ function driveId_(text) {
   return m ? (m[1] || m[2]) : "";
 }
 
+// Every Drive file id in a cell (the form puts several uploads in one cell, comma-separated).
+function driveIds_(text) {
+  return (String(text || "").match(/[?&]id=[\w-]+|\/d\/[\w-]+/g) || []).map(driveId_);
+}
+
+// The Public tab's "File to attach" holds links to the photos on the map, then
+// "hidden: <id> <id>" for any a reviewer unticked. The website only picks up the links.
+// Plain "hidden" is how older rows marked every photo unticked.
+function hiddenIds_(cell) {
+  const v = String(cell || "").trim();
+  if (v === "hidden") return null;  // all of them
+  const m = /hidden:([\w\s-]*)$/.exec(v);
+  return m ? m[1].trim().split(/\s+/).filter(Boolean) : [];
+}
+
 // ---- Called from the page ---------------------------------------------------
 
 function listResponses() {
@@ -113,6 +128,7 @@ function listResponses() {
     const key = g(r, "timestamp");
     const p = pub[key];
     const city = g(r, "city"), country = g(r, "country");
+    const fileIds = driveIds_(g(r, "file"));
     const original = {
       name: g(r, "name") || g(r, "first"),
       // Whatever they typed as a map location, else the city and country answers.
@@ -126,10 +142,11 @@ function listResponses() {
       lat: p["Latitude"], lng: p["Longitude"], topic: p["Topic"],
       about: p["Tell me about yourself"], relationship: p["Relationship with the ocean"],
       issue: p["One ocean issue"], doing: p["What is your community doing"],
-      wish: p["Wish people understood"], issues: p["Top 3 issues"], // Ticked unless a reviewer unticked it ("hidden"). Stories approved before photos
-      // worked have a blank here, and start ticked so re-approving adds their photo.
-      showPhoto: p["File to attach"] !== "hidden",
-    } : Object.assign({ title: "", lat: "", lng: "", topic: "", showPhoto: true }, original);
+      wish: p["Wish people understood"], issues: p["Top 3 issues"],
+      // Photos start ticked unless a reviewer unticked them, so stories approved
+      // before photos worked pick theirs up when re-approved.
+      hiddenPhotos: hiddenIds_(p["File to attach"]) || fileIds,
+    } : Object.assign({ title: "", lat: "", lng: "", topic: "", hiddenPhotos: [] }, original);
 
     return {
       key,
@@ -142,7 +159,7 @@ function listResponses() {
       },
       consent: !!g(r, "consent"),
       said: { city: city, country: country },   // what they answered, for checking the pin against
-      fileIds: (g(r, "file").match(/[?&]id=[\w-]+|\/d\/[\w-]+/g) || []).map(driveId_),
+      fileIds,
       current,
       original,
     };
@@ -187,23 +204,26 @@ function saveResponse(key, action, story) {
     if (!story.place || story.lat === "" || story.lng === "") throw new Error("Pick a map location first.");
 
     const consent = col.consent !== undefined ? row[col.consent] : "";
-    const fileId = driveId_(col.file !== undefined ? row[col.file] : "");
     // Attaching a photo means they want it shown, so the form's permission box isn't required.
-    // The reviewer still sees it and can untick "Show this photo".
-    const showPhoto = !!(story.showPhoto && fileId);
-    if (showPhoto) {
+    // The reviewer still sees each one and can untick "Show this photo".
+    const fileIds = driveIds_(col.file !== undefined ? row[col.file] : "");
+    const wanted = story.photos || [];
+    const shown = fileIds.filter(id => wanted.indexOf(id) >= 0);
+    const hidden = fileIds.filter(id => wanted.indexOf(id) < 0);
+    shown.forEach(id => {
       try {
-        driveFile_(fileId).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        driveFile_(id).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       } catch (e) {
-        throw new Error("Couldn't share the photo: " + e.message);
+        throw new Error("Couldn't share a photo: " + e.message);
       }
-    }
+    });
+    const fileCell = shown.map(id => "https://drive.google.com/open?id=" + id)
+      .concat(hidden.length ? ["hidden: " + hidden.join(" ")] : []).join(", ");
 
     const values = [
       key, story.name, story.title, story.place, String(story.lat), String(story.lng), story.topic,
       story.about, story.relationship, story.issue, story.doing, story.wish, story.issues,
-      // "hidden" remembers a deliberate untick; the website finds no file id in it and shows nothing.
-      consent, showPhoto ? "https://drive.google.com/open?id=" + fileId : fileId ? "hidden" : "", "yes",
+      consent, fileCell, "yes",
     ].map(v => String(v == null ? "" : v));
 
     const target = existing ? existing.row : ps.getLastRow() + 1;
