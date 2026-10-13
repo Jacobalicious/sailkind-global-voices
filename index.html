@@ -125,8 +125,30 @@
   .item .meta { color: var(--ink-soft); font-size: 12px; margin-top: 3px; }
   .item .grow { flex: 1; min-width: 0; }
   .item .thumb { width: 52px; height: 52px; object-fit: cover; border-radius: 8px; flex: none; background: var(--sand); }
-  #detail .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 14px; }
-  #detail .gallery img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; display: block; background: var(--sand); }
+  /* Photo slideshow at the top of a story. The track scrolls sideways and snaps to each
+     photo, so swiping works on phones; the arrows and dots drive the same scroll. */
+  .slides { position: relative; background: var(--sand); }
+  .slides .track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; scroll-behavior: smooth; }
+  .slides .track::-webkit-scrollbar { display: none; }
+  .slides .track img { flex: 0 0 100%; width: 100%; height: 240px; object-fit: cover; scroll-snap-align: start; display: block; }
+  .slides .arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 50%;
+    border: none; background: rgba(255,255,255,.92); color: #12343b; font-size: 22px; line-height: 1;
+    cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.25); display: grid; place-items: center;
+  }
+  .slides .arrow:hover { background: #fff; }
+  .slides .arrow:disabled { opacity: 0; pointer-events: none; }
+  .slides .prev { left: 10px; } .slides .next { right: 10px; }
+  .slides .count {
+    position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,.6); color: #fff;
+    font: 600 12px Inter, sans-serif; padding: 4px 9px; border-radius: 999px;
+  }
+  .slides .dots { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; }
+  .slides .dots button {
+    width: 9px; height: 9px; padding: 0; border-radius: 50%; border: none; cursor: pointer;
+    background: rgba(255,255,255,.55); box-shadow: 0 0 3px rgba(0,0,0,.4);
+  }
+  .slides .dots button.on { background: #fff; transform: scale(1.25); }
   .tip-photo { display: block; width: 180px; height: 110px; object-fit: cover; border-radius: 6px; margin-bottom: 6px; background: var(--sand); }
 
   /* Story detail */
@@ -416,12 +438,19 @@ function openStory(id, fly = true) {
   markers[id].setIcon(pinIcon(s.topic, true));
   if (fly) map.flyTo([s.lat, s.lng], Math.max(map.getZoom(), 5), { duration: 1.2 });
 
-  const photo = safeUrl(s.photo);
-  // The first photo goes up top; any others sit under the story.
-  const more = (s.photos || []).map(safeUrl).filter(u => u && u !== photo);
+  // Older stories only have "photo"; form stories list them all in "photos".
+  const photos = [...new Set([s.photo, ...(s.photos || [])].map(safeUrl).filter(Boolean))];
   const link = safeUrl(s.link);
   $("#detail").innerHTML = `
-    ${photo ? `<img class="hero" src="${esc(photo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}
+    ${photos.length === 1 ? `<img class="hero" src="${esc(photos[0])}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}
+    ${photos.length > 1 ? `
+      <div class="slides">
+        <div class="track">${photos.map((u, i) => `<img src="${esc(u)}" alt="Photo ${i + 1} of ${photos.length}" referrerpolicy="no-referrer"${i ? ' loading="lazy"' : ""}>`).join("")}</div>
+        <button class="arrow prev" aria-label="Previous photo">‹</button>
+        <button class="arrow next" aria-label="Next photo">›</button>
+        <span class="count">1 / ${photos.length}</span>
+        <div class="dots">${photos.map((_, i) => `<button aria-label="Photo ${i + 1}"></button>`).join("")}</div>
+      </div>` : ""}
     <div class="body">
       <button class="btn ghost back" id="backBtn">← All stories</button>
       <h2>${esc(s.title)}</h2>
@@ -429,7 +458,6 @@ function openStory(id, fly = true) {
       <div class="who">Shared by ${esc(s.name)}${s.community ? ` · ${esc(s.community)}` : ""}${s.date ? ` · ${esc(s.date)}` : ""}</div>
       <span class="tag" style="background:${colorOf(s.topic)}">${esc(s.topic)}</span>${s.sample ? `<span class="tag sample">Sample story</span>` : ""}
       <div class="story">${esc(s.story).replace(/\n*^## (.*)$\n?/gm, "<h4>$1</h4>")}</div>
-      ${more.length ? `<div class="gallery">${more.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"></a>`).join("")}</div>` : ""}
       ${link ? `<p><a class="link" href="${esc(link)}" target="_blank" rel="noopener">Learn more →</a></p>` : ""}
     </div>`;
   $("#panelHead").style.display = "none";
@@ -437,7 +465,36 @@ function openStory(id, fly = true) {
   $("#detail").classList.add("open");
   $("#detail").scrollTop = 0;
   $("#backBtn").onclick = closeStory;
+  if (photos.length > 1) slideshow($("#detail .slides"));
   history.replaceState(null, "", "#" + encodeURIComponent(id));
+}
+
+// Arrows, dots, the "2 / 5" counter, and swiping all move the same sideways scroll.
+function slideshow(box) {
+  const track = box.querySelector(".track");
+  const dots = [...box.querySelectorAll(".dots button")];
+  const prev = box.querySelector(".prev"), next = box.querySelector(".next");
+  const at = () => Math.round(track.scrollLeft / track.clientWidth);
+  const go = i => track.scrollTo({ left: Math.max(0, Math.min(i, dots.length - 1)) * track.clientWidth });
+  const update = () => {
+    const i = at();
+    dots.forEach((d, j) => d.classList.toggle("on", j === i));
+    box.querySelector(".count").textContent = `${i + 1} / ${dots.length}`;
+    prev.disabled = i === 0;
+    next.disabled = i === dots.length - 1;
+  };
+  prev.onclick = () => go(at() - 1);
+  next.onclick = () => go(at() + 1);
+  dots.forEach((d, j) => d.onclick = () => go(j));
+  // Clicking the photo itself moves on too (and wraps back to the first).
+  track.onclick = () => go(at() === dots.length - 1 ? 0 : at() + 1);
+  track.addEventListener("scroll", update, { passive: true });
+  // A photo that won't load is dropped so it doesn't leave a blank slide.
+  track.querySelectorAll("img").forEach((img, j) => {
+    const dot = dots[j];
+    img.onerror = () => { img.remove(); dot.remove(); dots.splice(dots.indexOf(dot), 1); update(); };
+  });
+  update();
 }
 
 function closeStory() {
