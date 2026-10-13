@@ -111,6 +111,7 @@
   <h1>🌊 Review stories</h1>
   <div class="tabs" id="tabs"></div>
   <div class="spacer"></div>
+  <button class="tab" id="addPhotos" title="Approved stories saved before every photo could be shown: add their missing photos to the map">Add missing photos</button>
   <a id="siteLink" target="_blank" rel="noopener">Open map preview ↗</a>
 </header>
 <main>
@@ -195,6 +196,25 @@ function renderTabs() {
       <div class="preview">${esc(i.current.about || i.current.relationship)}</div>
     </div>`).join("") || `<div class="empty">Nothing here.</div>`;
 }
+
+$("#addPhotos").onclick = async () => {
+  if (!confirm("Add every photo that's missing from the stories already on the map?\n\n"
+    + "This makes those photos viewable by anyone with the link. Photos someone unticked stay off.")) return;
+  const btn = $("#addPhotos");
+  btn.disabled = true; btn.textContent = "Adding photos…";
+  try {
+    const r = await server("addMissingPhotos");
+    toast(r.added
+      ? `Added ${r.added} photo${r.added === 1 ? "" : "s"} to ${r.stories} ${r.stories === 1 ? "story" : "stories"}.`
+        + (r.skipped ? ` Left ${r.skipped} unticked.` : "")
+      : "No missing photos — everything's already on the map." + (r.skipped ? ` (${r.skipped} unticked on purpose.)` : ""));
+    load(selected);
+  } catch (e) {
+    toast("Didn't finish: " + esc(e.message), true);
+  } finally {
+    btn.disabled = false; btn.textContent = "Add missing photos";
+  }
+};
 
 $("#tabs").onclick = e => {
   const b = e.target.closest(".tab"); if (!b) return;
@@ -391,6 +411,7 @@ const DEMO = (() => {
       ? { lat: -33.0472, lng: -71.6127, label: "Valparaíso, Chile", country: "Chile", countryOk: !expect || /chile/i.test(expect) }
       : { lat: 41.9028, lng: 12.4964, label: "Boracay, Italy (demo mismatch)", country: "Italy", countryOk: false },
     filePreview: () => ({ name: "beach.jpg", type: "image/jpeg", url: "#", image: "" }),
+    addMissingPhotos: () => ({ added: 0, stories: 0, skipped: 0 }),
     saveResponse: (key, action, story) => {
       const it = items.find(i => i.key === key);
       it.status = action === "save" ? it.status : { approve: "approved", deny: "denied", pending: "pending" }[action];

@@ -167,6 +167,52 @@ function listResponses() {
   return { items: items.reverse(), site: SITE };  // newest first
 }
 
+// The "Add missing photos" button. Stories saved before every photo could be shown
+// went onto the map with one photo or none; this shares the rest and adds them to the
+// Public tab. Photos a reviewer unticked stay off.
+function addMissingPhotos() {
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(20000);
+  try {
+    const sh = responsesSheet_();
+    const col = responseColumns_(sh);
+    if (col.file === undefined || sh.getLastRow() < 2) return { added: 0, stories: 0, skipped: 0 };
+    const files = {};
+    sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getDisplayValues()
+      .forEach(r => { files[r[col.timestamp]] = driveIds_(r[col.file]); });
+
+    const ps = publicSheet_();
+    const fileCol = PUBLIC_HEADERS.indexOf("File to attach") + 1;
+    let added = 0, stories = 0, skipped = 0;
+    Object.values(publicRows_(ps)).forEach(p => {
+      const ids = files[p["Timestamp"]] || [];
+      const cell = p["File to attach"];
+      const hidden = hiddenIds_(cell) || ids;            // plain "hidden": all unticked
+      const onMap = driveIds_(cell);
+      const missing = ids.filter(id => onMap.indexOf(id) < 0 && hidden.indexOf(id) < 0);
+      skipped += ids.filter(id => hidden.indexOf(id) >= 0).length;
+      if (!missing.length) return;
+      // Images only: a video or document attached to the form shouldn't become a slide.
+      const images = missing.filter(id => {
+        const f = driveFile_(id);
+        if (!/^image\//.test(f.getMimeType())) return false;
+        f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        return true;
+      });
+      if (!images.length) return;
+      const shown = ids.filter(id => onMap.indexOf(id) >= 0 || images.indexOf(id) >= 0);
+      const off = ids.filter(id => shown.indexOf(id) < 0);
+      ps.getRange(p.row, fileCol).setNumberFormat("@").setValue(
+        shown.map(id => "https://drive.google.com/open?id=" + id)
+          .concat(off.length ? ["hidden: " + off.join(" ")] : []).join(", "));
+      added += images.length; stories++;
+    });
+    return { added, stories, skipped };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 // What each button writes into the "Review status" column. The tabs on the page are
 // named after these, so the wording has to match on both sides.
 const ACTION_STATUS = { approve: "approved", deny: "denied", pending: "pending" };
