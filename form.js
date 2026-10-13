@@ -4,6 +4,25 @@
 // The published CSV link of the sheet's "Public" tab (approved rows, safe columns only).
 export const FORM_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTTdOA4JZ-_N3hj4IyahX-HUZANzbqd120A0SHK6CwmQWtXgi76WBWYwv_98EHI7WCFUdEpkbOzbMmo/pub?gid=584150587&single=true&output=csv";
 
+// The same tab read live by the feed script (feed/), which skips Google's ~5 minute
+// publishing delay. If it's ever down, the published link above is used instead.
+export const FEED_URL = "https://script.google.com/macros/s/AKfycbyqYHfZOxNLl9edukNzoVjrJzDd9DuV6gDSD5ubYa7YrFVIhSov-pdTldVgCqtH7ksB-A/exec";
+
+// The Public tab as CSV text: the live feed first, the published copy as a fallback.
+export async function fetchFormCsv(url = FORM_CSV) {
+  const bust = u => u + (u.includes("?") ? "&" : "?") + "t=" + Date.now();
+  if (url === FORM_CSV && FEED_URL) {
+    try {
+      const r = await fetch(bust(FEED_URL));
+      const text = r.ok ? await r.text() : "";
+      if (/^"?timestamp/i.test(text)) return text;   // anything else is a Google error page
+    } catch {}
+  }
+  const r = await fetch(bust(url));
+  if (!r.ok) throw new Error("the sheet link returned " + r.status);
+  return r.text();
+}
+
 export function parseCsv(text) {
   const rows = [];
   let row = [], field = "", quoted = false;

@@ -1,10 +1,10 @@
-# Every hour, copies approved Google Form stories onto the map.
+# Every 15 minutes, copies approved Google Form stories onto the map.
 # Can also be run by hand: Actions tab → "Import form stories" → Run workflow.
 name: Import form stories
 
 on:
   schedule:
-    - cron: "17 * * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 permissions:
