@@ -276,7 +276,7 @@ function select(key) {
   // Map picker
   let pos = c.lat !== "" && c.lat != null ? { lat: +c.lat, lng: +c.lng } : null;
   pickMap = L.map("pickMap", { worldCopyJump: true }).setView(pos ? [pos.lat, pos.lng] : [15, 10], pos ? 6 : 1);
-  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", { maxNativeZoom: 13, maxZoom: 16, attribution: "Esri" }).addTo(pickMap);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", { maxNativeZoom: 10, maxZoom: 16, attribution: "Esri" }).addTo(pickMap);
   L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}", { maxNativeZoom: 13, maxZoom: 16 }).addTo(pickMap);
   const setPin = (ll, zoom) => {
     pos = { lat: +(+ll.lat).toFixed(4), lng: +(+ll.lng).toFixed(4) };

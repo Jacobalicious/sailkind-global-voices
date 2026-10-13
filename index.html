@@ -349,7 +349,7 @@ const tiles = () => L.layerGroup([
   }),
   L.tileLayer(ESRI + "World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", {
     attribution: "Tiles &copy; Esri &mdash; GEBCO, NOAA, National Geographic, and other contributors",
-    maxNativeZoom: 13, maxZoom: 16,
+    maxNativeZoom: 10, maxZoom: 16,  // Esri has no ocean detail past 10; beyond that it serves "Map data not yet available" tiles, so stretch level 10 instead
     keepBuffer: 6,          // keep more tiles around the edges so dragging reveals map, not gaps
     updateWhenIdle: false,  // start loading new tiles while still dragging
     zIndex: 2,
