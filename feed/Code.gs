@@ -1,6 +1,7 @@
 // SailKind public feed — hands the website the sheet's "Public" tab, as CSV.
 // Google's "Publish to web" copy of the tab only refreshes every ~5 minutes; this
 // reads the sheet itself, so a story saved on the review page shows up right away.
+// (openById needs the full "spreadsheets" permission, though this only reads.)
 // It only ever reads the Public tab (approved stories, safe columns), which is
 // already published anyway — never the form responses.
 // Upload with feed/deploy.ps1.
