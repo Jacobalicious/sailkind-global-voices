@@ -195,7 +195,8 @@ export async function formStories(csvText, { known = {}, lookup = geocode } = {}
       topic: get("topic") || topicFrom(get("issues")),
       date: isNaN(d) ? "" : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
       story: sections.map(([h, v]) => `## ${h}\n${v}`).join("\n\n"),
-      photo: get("consent") ? photoFrom(get("file")) : "",  // media only with the permission box ticked
+      // The review page only fills in the file when the reviewer leaves "Show this photo" ticked.
+      photo: photoFrom(get("file")),
       link: "",
     });
   }

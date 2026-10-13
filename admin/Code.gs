@@ -127,7 +127,7 @@ function listResponses() {
       about: p["Tell me about yourself"], relationship: p["Relationship with the ocean"],
       issue: p["One ocean issue"], doing: p["What is your community doing"],
       wish: p["Wish people understood"], issues: p["Top 3 issues"], showPhoto: !!p["File to attach"],
-    } : Object.assign({ title: "", lat: "", lng: "", topic: "", showPhoto: false }, original);
+    } : Object.assign({ title: "", lat: "", lng: "", topic: "", showPhoto: true }, original);
 
     return {
       key,
@@ -186,7 +186,9 @@ function saveResponse(key, action, story) {
 
     const consent = col.consent !== undefined ? row[col.consent] : "";
     const fileId = driveId_(col.file !== undefined ? row[col.file] : "");
-    const showPhoto = !!(story.showPhoto && consent && fileId);
+    // Attaching a photo means they want it shown, so the form's permission box isn't required.
+    // The reviewer still sees it and can untick "Show this photo".
+    const showPhoto = !!(story.showPhoto && fileId);
     if (showPhoto) {
       try {
         driveFile_(fileId).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);

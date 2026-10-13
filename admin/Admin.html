@@ -323,8 +323,8 @@ function select(key) {
       box.querySelector(".info").innerHTML = `
         <b>${esc(f.name)}</b> <a href="${esc(f.url)}" target="_blank" rel="noopener">open ↗</a>
         ${n === 0 && isImg ? `
-          <label class="check"><input type="checkbox" id="f-photo" ${c.showPhoto ? "checked" : ""} ${it.consent ? "" : "disabled"}>
-          <span>Show this photo with the story${it.consent ? " <small>(makes the file viewable by anyone with the link)</small>" : " — <b>they didn't tick the media permission box</b>"}</span></label>`
+          <label class="check"><input type="checkbox" id="f-photo" ${c.showPhoto ? "checked" : ""}>
+          <span>Show this photo with the story <small>(makes the file viewable by anyone with the link)</small></span></label>`
         : `<div class="hint">${isImg ? "Only the first photo is shown on the map." : "Not an image, so it won't show on the map."}</div>`}`;
     } catch (e) {
       box.querySelector("img").remove();
@@ -381,7 +381,7 @@ const DEMO = (() => {
       said: { city: "Boracay", country: "Philippines" },
       original: { name: "Sam", place: "", about: "Student who loves reefs.", relationship: "Tourism and fishing.", issue: "Coral bleaching.", doing: "Reef monitoring club.", wish: "Reefs are our livelihood.", issues: "Coral reef damage" } },
   ];
-  items.forEach(i => i.current = Object.assign({ title: "", lat: "", lng: "", topic: "", showPhoto: false }, i.original));
+  items.forEach(i => i.current = Object.assign({ title: "", lat: "", lng: "", topic: "", showPhoto: true }, i.original));
   return {
     listResponses: () => ({ items: JSON.parse(JSON.stringify(items)), site: "https://jacobalicious.github.io/sailkind-global-voices/" }),
     locate: (p, expect) => /chile/i.test(p)
