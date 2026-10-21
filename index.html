@@ -44,7 +44,7 @@
   header .logo { font-size: 26px; }
   header h1 { font-size: 22px; letter-spacing: .2px; }
   header p { margin: 2px 0 0; font-size: 13px; opacity: .85; }
-  header .credit { font-size: 12px; font-style: italic; opacity: .75; }
+  header .credit { font-size: 15px; font-weight: 600; font-style: italic; opacity: .95; margin-top: 3px; }
   header .spacer { flex: 1; }
   .btn {
     border: 0; border-radius: 999px; cursor: pointer;
@@ -191,7 +191,6 @@
   .leaflet-popup-content { font-family: Inter, sans-serif; margin: 10px 14px; }
   .leaflet-popup-content b { font-family: Fraunces, serif; font-size: 15px; }
 
- color: var(--ink-soft); font-size: 14px; line-height: 1.5; margin: 6px 0 16px; }
   /* Dev preview banner (?dev) */
   #devBar {
     display: none; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -206,7 +205,7 @@
   @media (max-width: 760px) {
     header { padding: 10px 16px; }
     header p:not(.credit) { display: none; }
-    header .credit { margin: 0; font-size: 11px; }
+    header .credit { margin: 0; font-size: 13px; }
     header h1 { font-size: 18px; }
     main { flex-direction: column; }
     #map { flex: none; height: 45vh; }
