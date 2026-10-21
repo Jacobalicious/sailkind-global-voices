@@ -44,6 +44,7 @@
   header .logo { font-size: 26px; }
   header h1 { font-size: 22px; letter-spacing: .2px; }
   header p { margin: 2px 0 0; font-size: 13px; opacity: .85; }
+  header .credit { font-size: 12px; font-style: italic; opacity: .75; }
   header .spacer { flex: 1; }
   .btn {
     border: 0; border-radius: 999px; cursor: pointer;
@@ -204,7 +205,8 @@
   /* Phone */
   @media (max-width: 760px) {
     header { padding: 10px 16px; }
-    header p { display: none; }
+    header p:not(.credit) { display: none; }
+    header .credit { margin: 0; font-size: 11px; }
     header h1 { font-size: 18px; }
     main { flex-direction: column; }
     #map { flex: none; height: 45vh; }
@@ -220,6 +222,7 @@
     <div>
       <h1>SailKind Global Voices</h1>
       <p>Ocean conservation stories from communities around the world</p>
+      <p class="credit">Founded by Makenna Earl</p>
     </div>
   </div>
   <div class="spacer"></div>
