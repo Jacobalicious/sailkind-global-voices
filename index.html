@@ -47,7 +47,7 @@
   header .spacer { flex: 1; }
   .btn {
     border: 0; border-radius: 999px; cursor: pointer;
-    font: 600 14px Inter, sans-serif;
+    font: 600 14px Inter, sans-serif; text-decoration: none;
     padding: 10px 18px;
     background: var(--coral); color: #fff;
     box-shadow: 0 4px 12px rgba(255, 122, 89, .35);
@@ -59,7 +59,7 @@
   /* Layout */
   main { flex: 1; display: flex; min-height: 0; position: relative; }
   /* Deep-water gradient: if a tile is ever late, what shows through still reads as ocean. */
-  #map, #pickMap {
+  #map {
     background: radial-gradient(130% 100% at 50% 0%, #1d6180 0%, #11455e 45%, #072a3d 100%);
   }
   #map { flex: 1; position: relative; }
@@ -190,32 +190,7 @@
   .leaflet-popup-content { font-family: Inter, sans-serif; margin: 10px 14px; }
   .leaflet-popup-content b { font-family: Fraunces, serif; font-size: 15px; }
 
-  /* Share modal */
-  .overlay {
-    position: fixed; inset: 0; background: rgba(11, 34, 51, .55);
-    display: none; align-items: center; justify-content: center; z-index: 2000; padding: 16px;
-  }
-  .overlay.open { display: flex; }
-  .modal {
-    background: var(--card); border-radius: 18px; box-shadow: var(--shadow);
-    width: 560px; max-width: 100%; max-height: 92vh; overflow-y: auto; padding: 22px 24px;
-  }
-  .modal h2 { font-size: 22px; }
-  .modal .intro { color: var(--ink-soft); font-size: 14px; line-height: 1.5; margin: 6px 0 16px; }
-  label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 5px; }
-  label small { font-weight: 400; color: var(--ink-soft); }
-  input, textarea, select {
-    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
-    font: 14px Inter, sans-serif; color: var(--ink); background: #fff;
-  }
-  textarea { min-height: 150px; resize: vertical; line-height: 1.5; }
-  .row { display: flex; gap: 10px; }
-  .row > div { flex: 1; }
-  #pickMap { height: 220px; border-radius: 10px; border: 1px solid var(--line); }
-  .hint { font-size: 12px; color: var(--ink-soft); margin-top: 5px; }
-  .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
-  .err { color: #c0392b; font-size: 13px; margin-top: 10px; min-height: 1em; }
-
+ color: var(--ink-soft); font-size: 14px; line-height: 1.5; margin: 6px 0 16px; }
   /* Dev preview banner (?dev) */
   #devBar {
     display: none; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -234,7 +209,6 @@
     main { flex-direction: column; }
     #map { flex: none; height: 45vh; }
     aside { width: 100%; border-left: 0; border-top: 1px solid var(--line); flex: 1; }
-    .row { flex-direction: column; gap: 0; }
   }
 </style>
 </head>
@@ -249,7 +223,7 @@
     </div>
   </div>
   <div class="spacer"></div>
-  <button class="btn" id="shareBtn">+ Share your story</button>
+  <a class="btn" id="shareBtn" href="https://docs.google.com/forms/d/1pK1cQXSxvmzn3nhBDEs_i0qOhlSwf8n7crMPLNfPVIo/viewform" target="_blank" rel="noopener">+ Share your story</a>
 </header>
 
 <div id="devBar">
@@ -273,59 +247,9 @@
   </aside>
 </main>
 
-<div class="overlay" id="overlay">
-  <form class="modal" id="form" novalidate>
-    <h2>Share your ocean story</h2>
-    <p class="intro">
-      Tell the world what your community is doing for the ocean. When you submit, you'll be taken
-      to GitHub to post it (you'll need a free GitHub account). A moderator reviews each story,
-      then it appears on the map.
-    </p>
-
-    <label>Story title</label>
-    <input name="title" maxlength="100" placeholder="e.g. Replanting mangroves in our bay">
-
-    <div class="row">
-      <div>
-        <label>Your name <small>(or a pen name)</small></label>
-        <input name="name" maxlength="80">
-      </div>
-      <div>
-        <label>Community or group <small>(optional)</small></label>
-        <input name="community" maxlength="100">
-      </div>
-    </div>
-
-    <label>Where did this happen?</label>
-    <input name="place" maxlength="120" placeholder="Town, region, country">
-    <div id="pickMap" style="margin-top:8px"></div>
-    <div class="hint" id="pickHint">Click the map to drop your pin.</div>
-
-    <label>Topic</label>
-    <select name="topic"></select>
-
-    <label>Your story</label>
-    <textarea name="story" maxlength="4000" placeholder="What happened? Who was involved? What changed?"></textarea>
-
-    <label>Photo link <small>(optional — a direct https:// link to an image)</small></label>
-    <input name="photo" type="url" placeholder="https://…">
-
-    <label>Learn more link <small>(optional — your group's website or social page)</small></label>
-    <input name="link" type="url" placeholder="https://…">
-
-    <div class="err" id="formErr"></div>
-    <div class="actions">
-      <button type="button" class="btn ghost" id="cancelBtn">Cancel</button>
-      <button type="submit" class="btn">Continue to GitHub →</button>
-    </div>
-  </form>
-</div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 // ---- Settings ------------------------------------------------------------
-// The GitHub repo this site lives in. Story submissions become issues here.
-const REPO = "Jacobalicious/sailkind-global-voices";
 
 const TOPICS = {
   "Coral & reefs":        "#ff7a59",
@@ -542,70 +466,6 @@ const storiesLoaded = fetch("stories.json", { cache: "no-cache" })
   })
   .catch(() => { $("#count").textContent = "Couldn't load stories right now."; return []; });
 
-// ---- Share form ----------------------------------------------------------
-const form = $("#form");
-form.topic.innerHTML = Object.keys(TOPICS).map(t => `<option>${esc(t)}</option>`).join("");
-
-let pickMap, pickMarker, picked = null;
-function openForm() {
-  $("#overlay").classList.add("open");
-  $("#formErr").textContent = "";
-  if (!pickMap) {
-    pickMap = L.map("pickMap", { worldCopyJump: true, maxBoundsViscosity: 1 }).setView([15, 10], 1);
-    tiles().addTo(pickMap);
-    pickMap.on("click", e => {
-      const ll = e.latlng.wrap();
-      picked = { lat: +ll.lat.toFixed(4), lng: +ll.lng.toFixed(4) };
-      if (pickMarker) pickMarker.setLatLng(ll);
-      else pickMarker = L.marker(ll, { icon: pinIcon(form.topic.value) }).addTo(pickMap);
-      $("#pickHint").textContent = `Pin dropped at ${picked.lat}, ${picked.lng}. Click again to move it.`;
-    });
-  }
-  setTimeout(() => {
-    pickMap.invalidateSize();
-    if (!pickMap.locked) { lockToWorld(pickMap); pickMap.locked = true; }
-  }, 50);
-}
-function closeForm() { $("#overlay").classList.remove("open"); }
-
-$("#shareBtn").onclick = openForm;
-$("#cancelBtn").onclick = closeForm;
-$("#overlay").addEventListener("click", e => { if (e.target.id === "overlay") closeForm(); });
-document.addEventListener("keydown", e => { if (e.key === "Escape") closeForm(); });
-form.topic.addEventListener("change", () => pickMarker && pickMarker.setIcon(pinIcon(form.topic.value)));
-
-form.addEventListener("submit", e => {
-  e.preventDefault();
-  const f = Object.fromEntries(new FormData(form));
-  for (const k in f) f[k] = f[k].trim();
-  const missing = [];
-  if (!f.title) missing.push("a title");
-  if (!f.name) missing.push("your name");
-  if (!f.place) missing.push("the place");
-  if (!picked) missing.push("a pin on the map");
-  if (f.story.length < 40) missing.push("a story (at least a few sentences)");
-  if (f.photo && !safeUrl(f.photo)) missing.push("a photo link starting with https://");
-  if (f.link && !safeUrl(f.link)) missing.push("a website link starting with https://");
-  if (missing.length) { $("#formErr").textContent = "Please add " + missing.join(", ") + "."; return; }
-
-  // Opens GitHub's "new issue" page with the story template pre-filled.
-  const params = new URLSearchParams({
-    template: "story.yml",
-    title: "Story: " + f.title,
-    "story-title": f.title,
-    name: f.name,
-    community: f.community,
-    place: f.place,
-    coordinates: `${picked.lat}, ${picked.lng}`,
-    topic: f.topic,
-    story: f.story,
-    photo: f.photo,
-    link: f.link,
-  });
-  window.open(`https://github.com/${REPO}/issues/new?${params}`, "_blank", "noopener");
-  $("#formErr").textContent = "";
-  $("#pickHint").textContent = "Thanks! Finish posting in the GitHub tab that just opened.";
-});
 </script>
 <script type="module">
 // Keeps the map current without waiting for the hourly job that writes stories.json.
