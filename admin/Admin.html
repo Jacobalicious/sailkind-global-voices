@@ -406,7 +406,7 @@ const DEMO = (() => {
   ];
   items.forEach(i => i.current = Object.assign({ title: "", lat: "", lng: "", topic: "", hiddenPhotos: [] }, i.original));
   return {
-    listResponses: () => ({ items: JSON.parse(JSON.stringify(items)), site: "https://jacobalicious.github.io/sailkind-global-voices/" }),
+    listResponses: () => ({ items: JSON.parse(JSON.stringify(items)), site: "https://sailkind.com/" }),
     locate: (p, expect) => /chile/i.test(p)
       ? { lat: -33.0472, lng: -71.6127, label: "Valparaíso, Chile", country: "Chile", countryOk: !expect || /chile/i.test(expect) }
       : { lat: 41.9028, lng: 12.4964, label: "Boracay, Italy (demo mismatch)", country: "Italy", countryOk: false },
