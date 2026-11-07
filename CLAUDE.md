@@ -6,6 +6,7 @@ A world map of ocean conservation stories at https://sailkind.com. People submit
 
 - `index.html` is the whole public site, and `form.js` turns the sheet's "Public" tab into stories.
 - `stories.json` is rewritten by the `import-form` GitHub Action every 15 minutes. Don't hand-edit it, and expect bot commits on `main`, so pull before pushing.
+- The same Action uses `.github/scripts/story-list.mjs` to write the stories into `index.html` as plain HTML for search engines. Don't hand-edit between the `stories:start` and `stories:end` markers.
 - `admin.html` is the review page. It is static and public on purpose: no data or secrets ship in it, and everything comes from the API after sign-in.
 - `admin/Code.gs` is the review API, an Apps Script bound to the form's Google Sheet. `admin/set-login.mjs` makes sign-ins.
 - `feed/Code.gs` is a separate Apps Script that serves the Public tab as CSV, so the map updates within about 10 seconds without Google's 5-minute publish delay.
