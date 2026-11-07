@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
 <title>SailKind · Review stories</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -20,7 +21,8 @@
   }
   header h1 { font: 600 20px Fraunces, Georgia, serif; margin: 0; }
   header .spacer { flex: 1; }
-  header a { color: #fff; font-size: 13px; font-weight: 600; }
+  header a, header .link { color: #fff; font-size: 13px; font-weight: 600; }
+  header .link { background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; text-decoration: underline; }
   .tabs { display: flex; gap: 6px; }
   .tab {
     border: 1px solid rgba(255,255,255,.4); background: transparent; color: #fff; cursor: pointer;
@@ -89,6 +91,17 @@
   .ghost { background: #fff; color: var(--ink-soft); border: 1px solid var(--line); }
   .bar .spacer { flex: 1; }
 
+  #login {
+    position: fixed; inset: 0; z-index: 4000; display: none; align-items: center; justify-content: center;
+    padding: 16px; background: linear-gradient(135deg, var(--sea-deep), var(--sea));
+  }
+  body.signedOut #login { display: flex; }
+  #login form { width: 100%; max-width: 360px; background: var(--card); border-radius: 16px; padding: 26px 24px; box-shadow: 0 12px 40px rgba(11,34,51,.3); }
+  #login h1 { font: 600 24px Fraunces, Georgia, serif; margin: 0 0 4px; }
+  #login p { font-size: 13px; color: var(--ink-soft); margin: 0; }
+  #login button { width: 100%; margin-top: 20px; }
+  #loginErr { color: var(--no); font-size: 13px; font-weight: 500; margin-top: 12px; min-height: 18px; }
+
   #toast {
     position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%) translateY(20px); opacity: 0;
     background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 14px;
@@ -106,12 +119,25 @@
   }
 </style>
 </head>
-<body>
+<body class="signedOut">
+<div id="login">
+  <form>
+    <h1>🌊 SailKind</h1>
+    <p>Sign in to review stories.</p>
+    <label for="l-user">Username</label>
+    <input id="l-user" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <label for="l-pass">Password</label>
+    <input id="l-pass" type="password" autocomplete="current-password" required>
+    <button class="btn save" type="submit">Sign in</button>
+    <div id="loginErr" role="alert"></div>
+  </form>
+</div>
 <header>
   <h1>🌊 Review stories</h1>
   <div class="tabs" id="tabs"></div>
   <div class="spacer"></div>
   <a id="siteLink" target="_blank" rel="noopener">Open the map ↗</a>
+  <button class="link" id="signOut" type="button">Sign out</button>
 </header>
 <main>
   <div id="list"></div>
@@ -128,7 +154,6 @@ window.onerror = (msg, src, line) => {
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-// Note: avoid a regex ending in a slash — Google's page processing treats the double slash as a comment.
 const TOPICS = ["Coral & reefs", "Plastic & cleanups", "Fisheries", "Mangroves & coasts",
   "Marine wildlife", "Climate & ocean", "Education & culture", "Other"];
 const TOPIC_WORDS = [
@@ -144,14 +169,39 @@ const STORY_FIELDS = [
   ["wish", "What I wish the world understood", "What they wish people understood"],
 ];
 
-// ---- Server calls (with a demo mode when opened outside Google) ------------
-const server = (fn, ...args) => new Promise((resolve, reject) => {
-  if (window.google && google.script) {
-    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
-  } else {
-    setTimeout(() => { try { resolve(DEMO[fn](...args)); } catch (e) { reject(e); } }, 300);
+// ---- Server calls -------------------------------------------------------
+// The review script in the form's Google Sheet (admin/Code.gs), which checks the sign-in.
+const API_URL = "https://script.google.com/macros/s/AKfycbxgYmsK8QYyTzz-nTtpU7Gz2BjsDsu4HUTm7-u8DSAd19uo7CUJgLDNO4ES1JaR6Uy8fg/exec";
+
+// This tab's session. It's gone when the tab closes.
+const session = {
+  get() { try { return sessionStorage.getItem("sk-token") || ""; } catch (e) { return ""; } },
+  set(t) { try { if (t) sessionStorage.setItem("sk-token", t); else sessionStorage.removeItem("sk-token"); } catch (e) {} },
+};
+
+// text/plain keeps this a "simple" request; the script can't answer a CORS preflight.
+async function post(body) {
+  let reply;
+  try {
+    const r = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) });
+    reply = await r.json();
+  } catch (e) {
+    throw new Error("Couldn't reach the review service. Try again in a moment.");
   }
-});
+  if (reply.ok) return reply.result;
+  const err = new Error(reply.error);
+  err.signedOut = reply.signedOut;
+  throw err;
+}
+
+async function server(fn, ...args) {
+  try {
+    return await post({ fn, token: session.get(), args });
+  } catch (e) {
+    if (e.signedOut) showLogin("You've been signed out. Sign in to carry on where you left off.");
+    throw e;
+  }
+}
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -326,7 +376,7 @@ function select(key) {
       const f = await server("filePreview", id);
       if (f.image) box.querySelector("img").src = f.image; else box.querySelector("img").remove();
       nameEl.innerHTML = `<b>${esc(f.name)}</b> <a href="${esc(f.url)}" target="_blank" rel="noopener">open ↗</a>`;
-      if (!f.type.startsWith("image" + "/")) {
+      if (!f.type.startsWith("image/")) {
         box.querySelector(".check").outerHTML = `<div class="hint">Not an image, so it won't show on the map.</div>`;
       }
     } catch (e) {
@@ -372,35 +422,50 @@ async function act(it, action) {
   }
 }
 
-// ---- Demo data, used only when this page is opened outside Google ---------
-const DEMO = (() => {
-  const items = [
-    { key: "9/27/2026 9:21:32", status: "pending", consent: true, fileIds: ["demo1"],
-      private: { fullName: "Alex Example", emails: ["alex@example.com"], pronouns: "they/them", under18: "No" },
-      said: { city: "Valparaiso", country: "Chile" },
-      original: { name: "Alex", place: "Valparaiso, Chile", about: "I grew up on the coast and learned to swim before I could ride a bike.", relationship: "Most families here fish or work at the port.", issue: "Plastic washes up after every storm.", doing: "A weekly beach cleanup run by the school.", wish: "We are small but we care a lot.", issues: "Plastic pollution, Overfishing" } },
-    { key: "9/26/2026 14:02:10", status: "pending", consent: false, fileIds: [],
-      private: { fullName: "Sam Sample", emails: ["sam@example.com"], pronouns: "", under18: "Yes" },
-      said: { city: "Boracay", country: "Philippines" },
-      original: { name: "Sam", place: "", about: "Student who loves reefs.", relationship: "Tourism and fishing.", issue: "Coral bleaching.", doing: "Reef monitoring club.", wish: "Reefs are our livelihood.", issues: "Coral reef damage" } },
-  ];
-  items.forEach(i => i.current = Object.assign({ title: "", lat: "", lng: "", topic: "", hiddenPhotos: [] }, i.original));
-  return {
-    listResponses: () => ({ items: JSON.parse(JSON.stringify(items)), site: "https://sailkind.com/" }),
-    locate: (p, expect) => /chile/i.test(p)
-      ? { lat: -33.0472, lng: -71.6127, label: "Valparaíso, Chile", country: "Chile", countryOk: !expect || /chile/i.test(expect) }
-      : { lat: 41.9028, lng: 12.4964, label: "Boracay, Italy (demo mismatch)", country: "Italy", countryOk: false },
-    filePreview: () => ({ name: "beach.jpg", type: "image/jpeg", url: "#", image: "" }),
-    saveResponse: (key, action, story) => {
-      const it = items.find(i => i.key === key);
-      it.status = action === "save" ? it.status : { approve: "approved", deny: "denied", pending: "pending" }[action];
-      if (it.status === "approved") it.current = story;
-      return { status: it.status };
-    },
-  };
-})();
+// ---- Signing in -----------------------------------------------------------
+function showLogin(message) {
+  session.set("");
+  document.body.classList.add("signedOut");
+  $("#loginErr").textContent = message || "";
+  $("#l-pass").value = "";
+  ($("#l-user").value ? $("#l-pass") : $("#l-user")).focus();
+}
 
-load();
+function showApp() {
+  document.body.classList.remove("signedOut");
+  $("#loginErr").textContent = "";
+  // After a session runs out mid-review, the open story stays as it was, edits included.
+  if (!items.length) load();
+}
+
+$("#login form").onsubmit = async e => {
+  e.preventDefault();
+  const button = e.target.querySelector("button");
+  button.disabled = true;
+  $("#loginErr").textContent = "";
+  try {
+    const res = await post({ fn: "login", username: $("#l-user").value, password: $("#l-pass").value });
+    session.set(res.token);
+    $("#l-pass").value = "";
+    showApp();
+  } catch (err) {
+    $("#loginErr").textContent = err.message;
+  } finally {
+    button.disabled = false;
+  }
+};
+
+$("#signOut").onclick = () => {
+  post({ fn: "logout", token: session.get() }).catch(() => {});  // the page forgets it either way
+  items = [];
+  selected = null;
+  $("#list").innerHTML = "";
+  $("#tabs").innerHTML = "";
+  $("#editor").innerHTML = '<div class="empty">Loading responses…</div>';
+  showLogin();
+};
+
+if (session.get()) showApp(); else showLogin();
 </script>
 </body>
 </html>

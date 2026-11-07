@@ -1,7 +1,11 @@
-// SailKind review page — runs inside the form's Google Sheet (Extensions → Apps Script).
-// Shows each form response, lets you edit / approve / deny it, and writes approved,
-// edited stories to the "Public" tab, which the website reads.
-// The original responses are never changed except for the "Review status" column.
+// SailKind review API — runs inside the form's Google Sheet (Extensions → Apps Script).
+// sailkind.com/admin (admin.html) signs in here, then lists form responses, edits them,
+// approves or denies them, and writes approved stories to the "Public" tab, which the
+// website reads. The original responses are never changed except for the "Review status" column.
+//
+// The script runs as whoever deployed it and anyone on the internet can reach it, so
+// every request goes through doPost, and only login works without a session. Everything
+// else stays private with a trailing underscore, which Google won't let a browser call.
 
 const RESPONSES_SHEET = "Form Responses 1";
 const PUBLIC_SHEET = "Public";
@@ -37,10 +41,103 @@ const RESPONSE_FIELDS = {
   status:       h => h.startsWith("review status"),
 };
 
+// ---- Requests from the page ---------------------------------------------------
+
+// Old bookmarks of the Google link land here.
 function doGet() {
-  return HtmlService.createHtmlOutput(ADMIN_HTML)
-    .setTitle("SailKind · Review stories")
-    .addMetaTag("viewport", "width=device-width, initial-scale=1");
+  return ContentService.createTextOutput("The review page has moved to " + SITE + "admin");
+}
+
+// The page's calls that need a session.
+const API = {
+  listResponses: listResponses_,
+  saveResponse: saveResponse_,
+  locate: locate_,
+  filePreview: filePreview_,
+};
+
+// Body: JSON { fn, token, args } or { fn: "login", username, password }. It's sent as
+// text/plain so the browser skips the CORS preflight, which Apps Script can't answer.
+// Replies: { ok: true, result } or { ok: false, error, signedOut }.
+function doPost(e) {
+  let reply;
+  try {
+    const req = JSON.parse(e.postData.contents);
+    reply = { ok: true, result: dispatch_(req) };
+  } catch (err) {
+    reply = { ok: false, error: err.message, signedOut: !!err.signedOut };
+  }
+  return ContentService.createTextOutput(JSON.stringify(reply)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function dispatch_(req) {
+  if (req.fn === "login") return login_(req.username, req.password);
+  requireSession_(req.token);
+  if (req.fn === "logout") return logout_(req.token);
+  if (!Object.prototype.hasOwnProperty.call(API, req.fn)) throw new Error("Unknown request.");
+  return API[req.fn].apply(null, req.args || []);
+}
+
+// ---- Sign-in ------------------------------------------------------------------
+// Each reviewer is one Script Property, "login_<username>" = "<salt>:<hash>".
+// admin/set-login.mjs makes the value, so the password itself is never stored.
+
+const HASH_ROUNDS = 1000;            // keep in step with admin/set-login.mjs
+const SESSION_SECONDS = 6 * 60 * 60; // the longest CacheService keeps anything
+const MAX_FAILURES = 10;             // wrong passwords allowed per username…
+const LOCKOUT_SECONDS = 15 * 60;     // …within this long
+
+function hashPassword_(password, salt) {
+  let h = password;
+  for (let i = 0; i < HASH_ROUNDS; i++) {
+    const bytes = Utilities.computeHmacSha256Signature(h, salt, Utilities.Charset.UTF_8);
+    h = bytes.map(b => (b & 255).toString(16).padStart(2, "0")).join("");
+  }
+  return h;
+}
+
+function login_(username, password) {
+  const user = String(username || "").trim().toLowerCase().slice(0, 64);
+  const lock = LockService.getScriptLock();  // one attempt at a time, so the count below can't be raced
+  lock.waitLock(10000);
+  try {
+    const cache = CacheService.getScriptCache();
+    const failKey = "fails:" + user;
+    const fails = Number(cache.get(failKey)) || 0;
+    if (fails >= MAX_FAILURES) throw new Error("Too many wrong tries. Wait 15 minutes and try again.");
+
+    // Unknown usernames do the same work, so they take as long as known ones.
+    const stored = PropertiesService.getScriptProperties().getProperty("login_" + user) || "none:none";
+    const parts = stored.split(":");
+    if (hashPassword_(String(password || ""), parts[0]) !== parts[1]) {
+      cache.put(failKey, String(fails + 1), LOCKOUT_SECONDS);
+      throw new Error("Wrong username or password.");
+    }
+    cache.remove(failKey);
+    const token = Utilities.getUuid() + Utilities.getUuid();
+    cache.put("session:" + token, user, SESSION_SECONDS);
+    return { token, user };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Sessions slide: each call restarts the 6 hours.
+function requireSession_(token) {
+  const cache = CacheService.getScriptCache();
+  const key = "session:" + String(token || "").slice(0, 100);
+  const user = cache.get(key);
+  if (!user) {
+    const err = new Error("Please sign in again.");
+    err.signedOut = true;
+    throw err;
+  }
+  cache.put(key, user, SESSION_SECONDS);
+}
+
+function logout_(token) {
+  CacheService.getScriptCache().remove("session:" + token);
+  return {};
 }
 
 function responsesSheet_() {
@@ -113,9 +210,9 @@ function hiddenIds_(cell) {
   return m ? m[1].trim().split(/\s+/).filter(Boolean) : [];
 }
 
-// ---- Called from the page ---------------------------------------------------
+// ---- What the page can do once signed in ----------------------------------
 
-function listResponses() {
+function listResponses_() {
   const sh = responsesSheet_();
   const col = responseColumns_(sh);
   const last = sh.getLastRow();
@@ -178,7 +275,7 @@ function readStatus_(raw) {
 }
 
 // action: "approve" | "save" | "deny" | "pending"
-function saveResponse(key, action, story) {
+function saveResponse_(key, action, story) {
   const lock = LockService.getDocumentLock();
   lock.waitLock(20000);
   try {
@@ -261,7 +358,7 @@ function sameCountry_(a, b) {
 // Place name -> coordinates, using Google's geocoder. When we know which country they
 // said they're in, the answer is checked against it so a same-named town somewhere
 // else doesn't quietly become their pin.
-function locate(place, expectCountry) {
+function locate_(place, expectCountry) {
   const res = Maps.newGeocoder().geocode(place);
   const hit = res.results && res.results[0];
   if (!hit) return null;
@@ -279,21 +376,20 @@ function locate(place, expectCountry) {
 }
 
 // Form uploads live in the form owner's Drive, in a folder called
-// "<form name> (File responses)". Whoever opens this page needs access to that folder,
-// because the page runs as them. This turns Google's cryptic error into what to do.
+// "<form name> (File responses)". The account that deployed this script needs access to
+// that folder, because the script runs as it. This turns Google's cryptic error into what to do.
 function driveFile_(fileId) {
   try {
     return DriveApp.getFileById(fileId);
   } catch (e) {
-    const who = Session.getActiveUser().getEmail() || "your Google account";
+    const who = Session.getEffectiveUser().getEmail() || "the account that deployed the review script";
     throw new Error(`${who} can't open this file. Ask whoever owns the Google Form to open their Drive, `
-      + `find the folder ending in "(File responses)", and share it with ${who} as an Editor. `
-      + `(If you're signed into several Google accounts, the page may also be using the wrong one.)`);
+      + `find the folder ending in "(File responses)", and share it with ${who} as an Editor.`);
   }
 }
 
 // A small preview of an uploaded file (the Drive link opens the full thing).
-function filePreview(fileId) {
+function filePreview_(fileId) {
   const f = driveFile_(fileId);
   const thumb = f.getThumbnail();
   return {
