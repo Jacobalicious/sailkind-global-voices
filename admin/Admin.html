@@ -112,7 +112,7 @@
   <div class="tabs" id="tabs"></div>
   <div class="spacer"></div>
   <button class="tab" id="addPhotos" title="Approved stories saved before every photo could be shown: add their missing photos to the map">Add missing photos</button>
-  <a id="siteLink" target="_blank" rel="noopener">Open map preview ↗</a>
+  <a id="siteLink" target="_blank" rel="noopener">Open the map ↗</a>
 </header>
 <main>
   <div id="list"></div>
@@ -174,7 +174,7 @@ async function load(keepKey) {
     const res = await server("listResponses");
     clearTimeout(slow);
     items = res.items; site = res.site;
-    $("#siteLink").href = site + "?dev";
+    $("#siteLink").href = site;
     renderTabs();
     const still = items.find(i => i.key === keepKey && i.status === view);
     select(still ? still.key : (items.find(i => i.status === view) || {}).key);
