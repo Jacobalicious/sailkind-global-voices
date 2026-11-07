@@ -201,16 +201,6 @@
   .leaflet-popup-content { font-family: Inter, sans-serif; margin: 10px 14px; }
   .leaflet-popup-content b { font-family: Fraunces, serif; font-size: 15px; }
 
-  /* Dev preview banner (?dev) */
-  #devBar {
-    display: none; align-items: center; gap: 10px; flex-wrap: wrap;
-    padding: 8px 20px; background: #2b2d42; color: #fff; font-size: 13px; z-index: 1000;
-  }
-  #devBar.on { display: flex; }
-  #devBar b { color: #ffd166; }
-  #devBar button { background: #ffd166; color: #2b2d42; box-shadow: none; padding: 6px 12px; font-size: 13px; }
-  #devBar .msg { opacity: .85; }
-
   /* Phone */
   @media (max-width: 760px) {
     header { padding: 10px 16px; }
@@ -237,13 +227,6 @@
   <div class="spacer"></div>
   <a class="btn" id="shareBtn" href="https://docs.google.com/forms/d/1pK1cQXSxvmzn3nhBDEs_i0qOhlSwf8n7crMPLNfPVIo/viewform" target="_blank" rel="noopener">+ Share your story</a>
 </header>
-
-<div id="devBar">
-  <b>DEV PREVIEW</b>
-  <span class="msg" id="devMsg">Reading the Google Form sheet…</span>
-  <span class="spacer" style="flex:1"></span>
-  <button class="btn" id="devRefresh">Refresh from sheet</button>
-</div>
 
 <main>
   <div id="map"></div>
@@ -483,28 +466,11 @@ const storiesLoaded = fetch("stories.json", { cache: "no-cache" })
 // Keeps the map current without waiting for the job that writes stories.json.
 // stories.json has already drawn the pins by the time this runs; this reads the
 // approved rows straight from the published Google sheet and folds in anything newer.
-// Add ?dev to the address to see what it's doing. (?dev&csv=<link> reads another sheet.)
-import { FORM_CSV, fetchFormCsv, formStories, geocode } from "./form.js";
-
-const params = new URLSearchParams(location.search);
-const dev = params.has("dev");
-const csvUrl = params.get("csv") || FORM_CSV;
-const msg = document.getElementById("devMsg");
-if (dev) { document.getElementById("devBar").classList.add("on"); map.invalidateSize(); }
+import { fetchFormCsv, formStories } from "./form.js";
 
 // Looking a place name up is slow and rate-limited, so visitors never do it: an
-// approved story always has a pin set on the review page. Only the dev preview looks
-// places up, and it remembers what it found in this browser.
-const cache = (() => { try { return JSON.parse(localStorage.getItem("placeCache") || "{}"); } catch { return {}; } })();
-const devLookup = async (place, parts = {}) => {
-  const key = [place, parts.city || "", parts.country || ""].join("|");
-  if (!(key in cache)) {
-    msg.textContent = `Finding "${place}" on the map…`;
-    cache[key] = await geocode(place, parts);
-    try { localStorage.setItem("placeCache", JSON.stringify(cache)); } catch {}
-  }
-  return cache[key];
-};
+// approved story always has a pin set on the review page.
+const lookup = async () => null;
 
 // Swaps in a new set of stories, but never while someone is reading one.
 let shown = "";
@@ -519,30 +485,19 @@ function apply(data) {
 
 let busy = false;
 async function refresh() {
-  if (busy || !csvUrl) return;
+  if (busy) return;
   busy = true;
   try {
-    if (dev) msg.textContent = "Reading the Google Form sheet…";
-    const [site, csv] = await Promise.all([
-      storiesLoaded,
-      fetchFormCsv(csvUrl),
-    ]);
-    const { stories: fromForm, problems } = await formStories(csv, { lookup: dev ? devLookup : async () => null });
-    const what = apply([...fromForm, ...site.filter(s => !s.id.startsWith("form-"))]);
-    if (dev) {
-      msg.textContent = `${fromForm.length} approved form ${fromForm.length === 1 ? "story" : "stories"} `
-        + ({ updated: "just loaded", same: "— no change since last check", later: "waiting (close the open story to see them)" }[what])
-        + (problems.length ? ` · ⚠️ ${problems.join(" · ")}` : "");
-    }
-  } catch (e) {
+    const [site, csv] = await Promise.all([storiesLoaded, fetchFormCsv()]);
+    const { stories: fromForm } = await formStories(csv, { lookup });
+    apply([...fromForm, ...site.filter(s => !s.id.startsWith("form-"))]);
+  } catch {
     // The site already has stories.json on screen, so a sheet hiccup changes nothing.
-    if (dev) msg.textContent = "Couldn't read the sheet: " + e.message;
   } finally {
     busy = false;
   }
 }
 
-if (dev) document.getElementById("devRefresh").onclick = refresh;
 refresh();
 // Check again every 10 seconds while the tab is on screen, so a change on the review
 // page reaches anyone already looking at the map, and the moment it is opened again.
