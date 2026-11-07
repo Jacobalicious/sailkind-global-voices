@@ -41,14 +41,14 @@
     --shadow: 0 10px 30px rgba(11, 34, 51, .18);
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; }
+  html, body { margin: 0; height: 100%; }
   body {
     font-family: Inter, system-ui, sans-serif;
     color: var(--ink);
     background: var(--paper);
+    display: flex;
+    flex-direction: column;
   }
-  /* The map fills the first screen; About and the written-out stories sit below it. */
-  .screen { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
   h1, h2, h3 { font-family: Fraunces, Georgia, serif; margin: 0; }
 
   /* Header */
@@ -64,7 +64,6 @@
   header h1 { font-size: 22px; letter-spacing: .2px; }
   header p { margin: 2px 0 0; font-size: 13px; opacity: .85; }
   header .credit { font-size: 15px; font-weight: 600; font-style: italic; opacity: .95; margin-top: 3px; }
-  header .credit a { color: inherit; }
   header .spacer { flex: 1; }
   .btn {
     border: 0; border-radius: 999px; cursor: pointer;
@@ -211,20 +210,6 @@
   .leaflet-popup-content { font-family: Inter, sans-serif; margin: 10px 14px; }
   .leaflet-popup-content b { font-family: Fraunces, serif; font-size: 15px; }
 
-  /* About and written-out stories */
-  #about { max-width: 720px; margin: 0 auto; padding: 44px 20px 64px; line-height: 1.65; }
-  #about h2 { font-size: 28px; margin-top: 36px; }
-  #about h2:first-child { margin-top: 0; }
-  #about > p { margin: 10px 0 0; }
-  #storyList article { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 22px; }
-  #storyList h3 { font-size: 20px; line-height: 1.3; }
-  #storyList h4 {
-    font: 600 12px Inter, sans-serif; text-transform: uppercase; letter-spacing: .6px;
-    color: var(--sea); margin: 16px 0 2px;
-  }
-  #storyList p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-  #storyList .meta { color: var(--ink-soft); font-size: 13px; margin-top: 3px; }
-
   /* Phone */
   @media (max-width: 760px) {
     header { padding: 10px 16px; }
@@ -239,14 +224,13 @@
 </head>
 <body>
 
-<div class="screen">
 <header>
   <div class="brand">
     <span class="logo">🌊</span>
     <div>
       <h1>SailKind Global Voices</h1>
       <p>Ocean conservation stories from communities around the world</p>
-      <p class="credit">Founded by Makenna Earl · <a href="#about">About</a></p>
+      <p class="credit">Founded by Makenna Earl</p>
     </div>
   </div>
   <div class="spacer"></div>
@@ -266,165 +250,6 @@
     <div id="detail"></div>
   </aside>
 </main>
-</div>
-
-<section id="about">
-  <h2>About SailKind</h2>
-  <p>SailKind Global Voices is a world map of ocean conservation stories, told by the people who live and work beside the water. Founded by Makenna Earl, it gathers first-hand accounts of what is changing along coasts around the world, what communities are doing about it, and what they wish everyone understood.</p>
-  <p>Anyone can add their community's story with the <a class="link" href="https://docs.google.com/forms/d/1pK1cQXSxvmzn3nhBDEs_i0qOhlSwf8n7crMPLNfPVIo/viewform" target="_blank" rel="noopener">Share your story</a> form. Each one is reviewed before it appears on the map.</p>
-  <h2>Read the stories</h2>
-  <div id="storyList">
-<!-- stories:start (written by story-list.mjs, do not edit) -->
-<p class="meta">24 stories from 19 places</p>
-<article data-id="form-26dwf1">
-<h3>Amanda · Goleta CA</h3>
-<div class="meta">Goleta CA, United States of America · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Amanda · 2026-10</div>
-<h4>About me</h4><p>High school student, I enjoy the beach.</p><h4>Our community and the ocean</h4><p>People fish, surf, swim, and kayak in the ocean.</p><h4>An issue we see</h4><p>Oil spills from off shore oil rigs polluting the water.</p><h4>What we&#39;re doing</h4><p>We could vote for more protection for our oceans against oil rigs.</p><h4>What I wish the world understood</h4><p>Our beaches and shores are being affected by the oil pollution.</p><h4>Biggest issues here</h4><p>Plastic pollution, Sea level rise &amp; coastal erosion, Agriculture, industrial &amp; chemical pollution</p>
-</article>
-<article data-id="form-pwri5q">
-<h3>Beth · Armidale</h3>
-<div class="meta">Armidale, Australia · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Beth · 2026-10</div>
-<h4>About me</h4><p>I am an international student studying at the university of New England.</p><h4>Our community and the ocean</h4><p>The ocean is like a second home. It brings others together when you go on adventures to the ocean. It’s a main factor to our eco system as it’s a source life that covers about 71% of our earth. And has built many connections with other which ties into their culture, such as Torres  Strait Islander’s, Māori, Tongan and many others who also live in Australia have many stories and meanings that connect with the ocean.</p><h4>An issue we see</h4><p>Over pollution and environmental damage to coral reefs. Whether that is from rubbish floating into the ocean or to coral dying due climate change and frequent marine heat waves.</p><h4>What we&#39;re doing</h4><p>I am personally not involved with anything regarding a club or team who find the ocean important but in my community as we live a couple hours away from the coast, it brings a special intentionality when the ocean is talked about.</p><h4>What I wish the world understood</h4><p>I wish they could understand how little we actually know the waters of our own planet. At times it feels like they spend more time trying to get off it. The ocean is the only one we have, so why aren’t we fighting for it and protecting it more.</p><h4>Biggest issues here</h4><p>Plastic pollution, Coral reef damage, Rising ocean temperatures &amp; stronger climate change, Agriculture, industrial &amp; chemical pollution</p>
-</article>
-<article data-id="form-10dhofh">
-<h3>Maylee · Palmer Alaska</h3>
-<div class="meta">Palmer Alaska, USA · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Maylee · 2026-10</div>
-<h4>About me</h4><p>Student, I like to fish and swim in the ocean.</p><h4>Our community and the ocean</h4><p>I don’t live by the ocean but whenever we have the chance to go to the beach, we fish and our towns are very reliant on fish for food</p><h4>An issue we see</h4><p>There’s a lot of polluting in the ocean and a lot of trash</p><h4>What we&#39;re doing</h4><p>We could be more careful with what we trough away and make sure it’s not going to somehow en up in the ocean. We could also be more cautious and pay attention to oil and make sure none of it spills or leaks into the ocean</p><h4>What I wish the world understood</h4><p>Many people’s lively hood depends on ocean fishing. When the ocean is polluted the fish aren’t good and that effects their jobs.</p><h4>Biggest issues here</h4><p>Plastic pollution, Unsustainable fishing, Decline of marine wildlife &amp; biodiversity</p>
-</article>
-<article data-id="form-z0jhax">
-<h3>Tamatoa · Lyon</h3>
-<div class="meta">Lyon, French Polynesia · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Tamatoa · 2026-10</div>
-<h4>About me</h4><p>I work as a Management Controller for a logistics company. I enjoy fishing or simply relaxing by the beach.</p><h4>Our community and the ocean</h4><p>The ocean is for my community a source of revenue, food and entertainment. It is central to our lives. In the marquesas islands, pollution and overfishing hasn’t gone out of control yet and we can still have access to an abundance of fishes to provide for our families.</p><h4>An issue we see</h4><p>The rising of pollution in the lagoons. The lack of appropriate waste management infrastructure is impacting the earth and with the rain the lagoons directly.</p><h4>What we&#39;re doing</h4><p>Growing up in the Marquesas Islands, I learned that the ocean is not just a resource but part of our identity, culture, and way of life. We can protect it by strengthening traditional Polynesian knowledge, educating younger generations, and supporting locally managed marine areas that allow fish populations and marine ecosystems to recover.</p><h4>What I wish the world understood</h4><p>I wish people understood that in Polynesia, the ocean is not a barrier separating islands but a source of life that connects our people, our ancestors, and our future. Conservation efforts should listen to local communities and respect our ancestral knowledge, because the people who live closest to the ocean often have some of the deepest connections to protecting it.</p><h4>Biggest issues here</h4><p>Plastic pollution, Decline of marine wildlife &amp; biodiversity, Coral reef damage</p>
-</article>
-<article data-id="form-9th4ty">
-<h3>Thais · Vitória</h3>
-<div class="meta">Vitória, Brazil · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Thais · 2026-10</div>
-<h4>About me</h4><p>Digital Marketing Specialist, I enjoy going to the beach on weekends and spending time by the ocean.</p><h4>Our community and the ocean</h4><p>In my community in Espírito Santo, Brazil, the ocean is a place where people relax, spend time with family and friends, and enjoy nature, especially on weekends. We also have marine conservation areas and initiatives that help protect ocean wildlife, reminding us how important it is to preserve marine life for future generations.</p><h4>An issue we see</h4><p>One ocean issue I see in my community is the amount of trash people leave on the beaches, especially after weekends and holidays. This pollution harms marine life and makes it important for people to be more responsible and respectful of the environment.</p><h4>What we&#39;re doing</h4><p>My community could do more to protect the ocean by enforcing stricter laws against littering, raising public awareness about beach pollution, and providing more support for marine conservation projects. I believe education and community involvement are essential to protecting marine life and keeping our beaches clean.</p><h4>What I wish the world understood</h4><p>I wish people around the world understood how important the ocean is to our community, not only as a place for leisure and relaxation but also as a part of our daily lives and our connection with nature. I believe organizations should invest more in educating people and supporting local marine conservation efforts to protect the ocean for future generations.</p><h4>Biggest issues here</h4><p>Plastic pollution, Water pollution, Lack of government regulation/implementation of sustainable laws</p>
-</article>
-<article data-id="form-gmcr1d">
-<h3>Emma-Jane · Merthyr Tydfil</h3>
-<div class="meta">Merthyr Tydfil, Wales · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Emma-Jane · 2026-10</div>
-<h4>About me</h4><p>Senior Residential Support Worker. My family likes swimming, kayaking, body boarding on weekends and during holidays.</p><h4>Our community and the ocean</h4><p>The ocean is a place to go for a special day out. We take young children to occupy them for the entire day in sensory play with other children and teenagers to hang out with their friends and behave like young children again. By taking them we teach them to love the places we hold dear.</p><h4>An issue we see</h4><p>The ocean is dirty. The water does not look clear anymore, it looks murky and it tastes wrong.</p><h4>What we&#39;re doing</h4><p>Surfers against sewerage campaign regularly, sharing posts online.</p><h4>What I wish the world understood</h4><p>Cleanliness matters. Chemicals in the water matter. If people do not feel the ocean is safe they will stay inside more and their children will grow up increasingly dependant on social media and digital entertainment platforms.</p><h4>Biggest issues here</h4><p>Water pollution, Improper waste management, Agriculture, industrial &amp; chemical pollution</p>
-</article>
-<article data-id="form-13f55jt">
-<h3>Carson · Tofol</h3>
-<div class="meta">Tofol, Federated States Micronesia · Coral &amp; reefs</div>
-<div class="meta">Shared by Carson · 2026-10</div>
-<h4>About me</h4><p>I am a Local Officer. I enjoy playing sports especially baseball and fishing every chance I get.</p><h4>Our community and the ocean</h4><p>The ocean is very important because it is the main source where people here find their food at.</p><h4>An issue we see</h4><p>Dying of coral reefs and rising of temperature in the sea.</p><h4>What we&#39;re doing</h4><p>Enforce laws tp stop people from littering in the ocean.</p><h4>What I wish the world understood</h4><p>The ocean is who we are. It is our culture and tradition.</p><h4>Biggest issues here</h4><p>Coral reef damage, Rising ocean temperatures &amp; stronger climate change, Improper waste management</p>
-</article>
-<article data-id="form-pe6pba">
-<h3>Tanya · Douglas</h3>
-<div class="meta">Douglas, Isle of Man · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Tanya · 2026-10</div>
-<h4>About me</h4><p>I live on the Isle of Man and work as a Maritime Security Supervisor at the Sea Terminal in Douglas, so the sea is part of my everyday working life. I enjoy coastal walks, taking in the beautiful scenery and spending time by the sea with my family.</p><h4>Our community and the ocean</h4><p>Living on the Isle of Man, the sea connects our community to the world, with ferries bringing passengers, visitors and essential supplies to the island. In my work at the Sea Terminal, I see how much we depend on these connections and how rough weather can disrupt everyday plans. For me, the coast is also a place to relax and enjoy time with family, and it is a special part of what makes the island home.</p><h4>An issue we see</h4><p>One issue I notice is litter and plastic washed up along our beaches and coastline. It spoils these beautiful places, and I worry about the harm it can cause to marine wildlife.</p><h4>What we&#39;re doing</h4><p>Our community could encourage more regular beach cleans and involve local schools, families and businesses. Reducing single-use plastics and providing well-maintained bins near beaches would also help, alongside teaching children why caring for the sea matters</p><h4>What I wish the world understood</h4><p>I wish people understood how much a small island community depends on the sea for everyday supplies, work and keeping in touch with family and friends. Protecting it means protecting our home and our children’s future. I would like organisations to support practical local efforts while also tackling pollution before it reaches our shores.</p><h4>Biggest issues here</h4><p>Plastic pollution, Water pollution, Sea level rise &amp; coastal erosion</p>
-</article>
-<article data-id="form-16b9i7m">
-<h3>Carys · Seattle Washington</h3>
-<div class="meta">Seattle Washington, America · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Carys · 2026-10</div>
-<h4>About me</h4><p>15, Sophomore, I play piano and I love puzzles!</p><h4>Our community and the ocean</h4><p>Seattle is a big fishing and ocean town being right on the puget sound everyone appreciates water here!</p><h4>An issue we see</h4><p>Over fishing and pollution for sure.. with so many people and so much access to water, the bay area here gets pretty trashy.</p><h4>What we&#39;re doing</h4><p>Lots of advocacy and protections from the state and other corporations, as well as activism from youth like me!</p><h4>What I wish the world understood</h4><p>The ocean is our home and we all came from it, so we shouldn’t kill it.</p><h4>Biggest issues here</h4><p>Plastic pollution, Unsustainable fishing, Improper waste management</p>
-</article>
-<article data-id="form-1gte40l">
-<h3>Brilynn · Des Moines</h3>
-<div class="meta">Des Moines, America · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Brilynn · 2026-10</div>
-<h4>About me</h4><p>Currently, I am attending UWF as a freshman undergraduate majoring in marine biology. I love snorkeling and everything about marine creatures.</p><h4>Our community and the ocean</h4><p>Currently because im in Florida, the ocean seems to mean a lot, recreational wise, fishing, and a lot for the weather and wildlife.</p><h4>An issue we see</h4><p>Esspecially when im on the beaches, I see lots of birds picking up harmful waste and trashes and knowing that goes into the ocean through microplastics is a huge issue.</p><h4>What we&#39;re doing</h4><p>Beach clean ups, overall spread of awareness, and monthly gatherings to do these things.</p><h4>What I wish the world understood</h4><p>That no matter how small the action may be, it still matters.</p><h4>Biggest issues here</h4><p>Plastic pollution, Ocean acidification, Lack of environmental awareness, education, or conservation resources</p>
-</article>
-<article data-id="form-aquov8">
-<h3>Serena · Pacific Grove</h3>
-<div class="meta">Pacific Grove, CA, United States ofAmerica · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Serena · 2026-10</div>
-<h4>About me</h4><p>I&#39;m a student who enjoys swimming and learning about marine life.</p><h4>Our community and the ocean</h4><p>My community is right by the ocean, and major parts of our economy are fisheries and tourism for the aquarium.</p><h4>An issue we see</h4><p>There&#39;s always a lot of trash everywhere that ends up in the ocean.</p><h4>What we&#39;re doing</h4><p>Some places do make an effort to give out reusable items, and I think that more places should.</p><h4>What I wish the world understood</h4><p>I wish people understood how precious the environment is and worked harder to protect it.</p><h4>Biggest issues here</h4><p>Plastic pollution, Ocean acidification, Agriculture, industrial &amp; chemical pollution</p>
-</article>
-<article data-id="form-1mwqbfh">
-<h3>Jessica · Dover</h3>
-<div class="meta">Dover, MA, China · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Jessica · 2026-10</div>
-<h4>About me</h4><p>I am a student. I love visiting the beach and swimming in the ocean.</p><h4>Our community and the ocean</h4><p>The Charles River flows through our town, and many people fish in it. We live quite close to the Atlantic Ocean, so we often visit; I also know a lot of people who go down to Cape Cod every summer.</p><h4>An issue we see</h4><p>I see a lot of plastic pollution (specifically, lots of plastic water bottles).</p><h4>What we&#39;re doing</h4><p>The Charles River Watershed Association frequently organizes volunteer groups to go on trash pick-ups, identify and remove invasive species, etc.</p><h4>What I wish the world understood</h4><p>I just wish people understood the importance of protecting our ocean for the future, that we can do things to help, and that negative effects have already shown up.</p><h4>Biggest issues here</h4><p>Plastic pollution, Water pollution, Decline of marine wildlife &amp; biodiversity</p>
-</article>
-<article data-id="form-51ggb5">
-<h3>Yuvan · Jacksonville</h3>
-<div class="meta">Jacksonville, FL, United States · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Yuvan · 2026-10</div>
-<h4>About me</h4><p>I am a 13 year-old and I make circuits using Arduino. I also code websites and own a club and lab in my school.</p><h4>Our community and the ocean</h4><p>We have the St. Johns River and it starts in Jacksonville and ends in south Florida.</p><h4>An issue we see</h4><p>One issue I see is that people throw trash into the water, people dump chemicals like pest-removers and weed removers, etc.</p><h4>What we&#39;re doing</h4><p>Right now, I&#39;m doing a project with my city for microplastic pollution, but my community can educate people to understand how their actions affect the ocean in the present day and the effect in the future.</p><h4>What I wish the world understood</h4><p>One thing I wish people around the world understood about my community and the ocean is the environmental consequence(s) - good and bad - to every action everyone takes and how it affects us and the ocean. People need to feel/truly understand the consequence as people won&#39;t care until the bad thing happens to them.</p><h4>Biggest issues here</h4><p>Plastic pollution, Ocean acidification, Lack of environmental awareness, education, or conservation resources</p>
-</article>
-<article data-id="form-1ipiniy">
-<h3>Amit · Jacksonville</h3>
-<div class="meta">Jacksonville, United States · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Amit · 2026-10</div>
-<h4>About me</h4><p>Software Engineer; I love to stroll, walk on the beach</p><h4>Our community and the ocean</h4><p>With two thirds of the earth’s surface covered by oceans, the oceans are an integral part of mankind and we all should not be ignorant about it</p><h4>An issue we see</h4><p>Our oceans are being polluted by us humans</p><h4>What we&#39;re doing</h4><p>I do read about few organizations actively working on ideas to clean up our oceans</p><h4>What I wish the world understood</h4><p>Humans should manage the waste appropriately and not pollute our environment and oceans</p><h4>Biggest issues here</h4><p>Plastic pollution, Unsustainable fishing, Sea level rise &amp; coastal erosion, Improper waste management, Lack of government regulation/implementation of sustainable laws</p>
-</article>
-<article data-id="form-1b69zna">
-<h3>Nandkumar · Mumbai</h3>
-<div class="meta">Mumbai, India · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Nandkumar · 2026-10</div>
-<h4>About me</h4><p>Retired banker</p><h4>Our community and the ocean</h4><p>We are fish lovers and offen  go to sea shower to buy fish.</p><h4>An issue we see</h4><p>Most of the sea near the metropolis  are now contaminated  and full of plastic washed down the drainages</p><h4>What we&#39;re doing</h4><p>Direct sending the drainage water in to the see must be stopped needs to be processed. Though this project need huge investment  but is a need of hour to save sea world.</p><h4>What I wish the world understood</h4><p>Some student wings and ngos are regularly cleaning the sea shores of faith that is dumped by the crowd</p><h4>Biggest issues here</h4><p>Plastic pollution, Water pollution, Lack of environmental awareness, education, or conservation resources, Lack of government regulation/implementation of sustainable laws</p>
-</article>
-<article data-id="form-6assdd">
-<h3>Sudesh · Toronto</h3>
-<div class="meta">Toronto, India · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Sudesh · 2026-10</div>
-<h4>About me</h4><p>Retired</p><h4>Our community and the ocean</h4><p>We are inland, not near the ocean so no direct relationship as such</p><h4>An issue we see</h4><p>Pollution of the oceans and its environment</p><h4>What I wish the world understood</h4><p>Saving the environment in general</p><h4>Biggest issues here</h4><p>Plastic pollution, Unsustainable fishing, Sea level rise &amp; coastal erosion, Rising ocean temperatures &amp; stronger climate change, Lack of environmental awareness, education, or conservation resources</p>
-</article>
-<article data-id="form-14yjsj6">
-<h3>Marie · Dublin</h3>
-<div class="meta">Dublin, Ireland · Fisheries</div>
-<div class="meta">Shared by Marie · 2026-10</div>
-<h4>About me</h4><p>Accountant</p><h4>Our community and the ocean</h4><p>We live four miles from the sea
- The kids fish and go out in their paddle board and swim in the sea</p><h4>An issue we see</h4><p>Commercial overfishing</p><h4>What we&#39;re doing</h4><p>Reducing water pollution and raising awareness</p><h4>What I wish the world understood</h4><p>That their experience of the sea would be much richer if we restored and protected our ecosystems</p><h4>Biggest issues here</h4><p>Unsustainable fishing, Sea level rise &amp; coastal erosion, Agriculture, industrial &amp; chemical pollution</p>
-</article>
-<article data-id="form-1oc9qti">
-<h3>Audrey · Port Aransas</h3>
-<div class="meta">Port Aransas, Texas, United States of America · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Audrey · 2026-10</div>
-<h4>About me</h4><p>I am a middle school student, and I love to swim in the ocean.</p><h4>Our community and the ocean</h4><p>There is a lot of tourism based on the ocean and its beach here, and everyone here loves to surf or fish.</p><h4>An issue we see</h4><p>There is a lot of trash that washes up here both from people leaving trash on the beach and brought in on the currents.</p><h4>What we&#39;re doing</h4><p>There are multiple beach cleanup organizations including “Keep Port Aransas Beautiful,” and “Flynn’s Beach Squad.”</p><h4>What I wish the world understood</h4><p>I don’t really know.</p><h4>Biggest issues here</h4><p>Plastic pollution, Water pollution, Lack of environmental awareness, education, or conservation resources</p>
-</article>
-<article data-id="form-12qz5z7">
-<h3>Lydia · Kuala Lumpur</h3>
-<div class="meta">Kuala Lumpur, Malaysia · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Lydia · 2026-10</div>
-<h4>About me</h4><p>DSA, snorkeling and island hopping on my days off</p><h4>Our community and the ocean</h4><p>Local fishing. Ocean is our source of seafood and a home for the marine life.</p><h4>An issue we see</h4><p>Floating garbage</p><h4>What we&#39;re doing</h4><p>I always carry my trash with me until I find garbage bin. I always volunteer myself if there is an activities involving beach or ocean cleaning.</p><h4>What I wish the world understood</h4><p>I wish that everyone, young or old know that ocean is the home of Nemo and others marine life that we need to take care of and at some other part of the world ocean is the source of income for the family.</p><h4>Biggest issues here</h4><p>Plastic pollution, Water pollution, Lack of environmental awareness, education, or conservation resources, Lack of government regulation/implementation of sustainable laws</p>
-</article>
-<article data-id="form-11gv63e">
-<h3>Cyril Jacob · Minneapolis</h3>
-<div class="meta">Minneapolis, United States · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Cyril Jacob · 2026-10</div>
-<h4>About me</h4><p>IT security engineer. I like walking by the ocean beach</p><h4>Our community and the ocean</h4><p>A gateway to explore foreign lands. A source of nourishing and tasty seafood.</p><h4>An issue we see</h4><p>Pollution</p><h4>What we&#39;re doing</h4><p>Be mindful of the ocean&#39;s capacity to absorb human waste</p><h4>What I wish the world understood</h4><p>Be mindful of the ocean&#39;s capacity to absorb human waste and it&#39;s impact on our environment</p><h4>Biggest issues here</h4><p>Plastic pollution, Improper waste management, Agriculture, industrial &amp; chemical pollution</p>
-</article>
-<article data-id="form-13mdf2z">
-<h3>Eritai · Banraeaba</h3>
-<div class="meta">Banraeaba, Kiribati · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Eritai · 2026-10</div>
-<h4>About me</h4><p>Managing Director, I love fishing on the weekends</p><h4>Our community and the ocean</h4><p>The ocean is our life, identity, and culture, providing food, transportation, and livelihoods while connecting our families and communities across the islands of Kiribati. It represents our strength and resilience, and we have a responsibility to protect it for future generations, especially from the impacts of climate change.</p><h4>An issue we see</h4><p>One major ocean issue in our community is coastal erosion and rising sea levels, which threaten our homes, land and livelihoods. We are witnessing hirelings gradually disappearing and seawater flooding our communities, especially during high tides and storms.</p><h4>What we&#39;re doing</h4><p>Our community can protect the ocean by reducing plastic waste, organising coastal cleanups, planting mangroves, and promoting sustainable fishing practices. We should also strengthen traditional conservation practices and educate younger generations about the importance of protecting our marine environment.</p><h4>What I wish the world understood</h4><p>I wish the world understood that for the people of Kiribati, the ocean is not just our livelihood but an essential part of our identity, culture, and survival. International organization should focus more on practical, community-led solutions that address coastal erosion, marine pollution and climate change while respecting our traditional knowledge.</p><h4>Biggest issues here</h4><p>Plastic pollution, Sea level rise &amp; coastal erosion, Lack of government regulation/implementation of sustainable laws</p>
-</article>
-<article data-id="form-mc2rey">
-<h3>Bebeo · Tafunsak Wiyac</h3>
-<div class="meta">Tafunsak Wiyac · Fisheries</div>
-<div class="meta">Shared by Bebeo · 2026-09</div>
-<h4>About me</h4><p>Nurse or Doctor , I enjoy going out with my mom to fish at night</p><h4>Our community and the ocean</h4><p>To me and the people around me , the ocean means life and survival. It gives us fish and seafood , it provides a way for us to travel between islands , and connects us to our culture and tradition. It is also a place where some families gather to make memories and have fun together.</p><h4>An issue we see</h4><p>I see plastic trash in the ocean. It can hurt sea animals and pollute the ocean.</p><h4>What we&#39;re doing</h4><p>Limit ocean harvesting</p><h4>What I wish the world understood</h4><p>I wish people can understand that the ocean is important in our community. We depend on it for food,travel, and our way of life , so we need to protect our ocean.</p><h4>Biggest issues here</h4><p>Unsustainable fishing, Sea level rise &amp; coastal erosion, Rising ocean temperatures &amp; stronger climate change</p>
-</article>
-<article data-id="form-1vuik4">
-<h3>Nia · State - Kerala.                    City - Ernakulam</h3>
-<div class="meta">State - Kerala.                    City - Ernakulam · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Nia · 2026-10</div>
-<h4>About me</h4><p>I&#39;m a school student . I&#39;m currently in grade X. 
-I love going to the beach with my family and friends.</p><h4>Our community and the ocean</h4><p>To me , underwater world has always fascinated me..But I think the water bodies and oceans located near the factories are fully contaminated with waste and other pollutants.. I don&#39;t think majority of the Indians are interested in water related activities...I looovvveee it though !!</p><h4>An issue we see</h4><p>Waste in water</p><h4>What we&#39;re doing</h4><p>Clean it regularly before plastics and other waste slowly sink into water..</p><h4>What I wish the world understood</h4><p>Not to throw waste in the oceans</p><h4>Biggest issues here</h4><p>Plastic pollution, Water pollution, Ocean acidification, Improper waste management</p>
-</article>
-<article data-id="form-1ksos6p">
-<h3>Charlotte · Santa Barbara California</h3>
-<div class="meta">Santa Barbara California · Plastic &amp; cleanups</div>
-<div class="meta">Shared by Charlotte · 2026-09</div>
-<h4>About me</h4><p>I’m born and raised in Santa Barbara CA USA and one thing I’m concerned about is ocean warming and global warming as a whole. Ocean warming to my knowledge can confuse and force animals out of their natural habitats in order for them to try to find a place that actually fits for them creating a disturbance in the life cycle.</p><h4>Our community and the ocean</h4><p>My city has a really close connection to the beach and ocean, it’s a staple of everyone’s life who lives here. Going to the beach is most likely the #1 activity of many families and most teenagers.</p><h4>An issue we see</h4><p>In my community the biggest concern I see regarding the ocean is frequent oil spills on our beaches. This not only prohibits people from enjoying the beach, but harms animals and the habitat not only in the ocean but next to the shores.</p><h4>What we&#39;re doing</h4><p>When oil spills happen there is a lot of effort by professionals to clean it up, but I think we should work harder to keep it from happening in the first place. The city also organizes beach trash pick ups, but either they aren’t frequent or they aren’t advertised well because I don’t hear of them a lot.</p><h4>What I wish the world understood</h4><p>I wish people really took into consideration the amount of ocean that takes up our world and it is one of the most important things that keeps our climate and experience on this earth balanced. Without it balancing things like climate, it can be used as a weapon against us.</p><h4>Biggest issues here</h4><p>Plastic pollution, Water pollution, Rising ocean temperatures &amp; stronger climate change</p>
-</article>
-<!-- stories:end -->
-  </div>
-</section>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
@@ -633,9 +458,6 @@ function showStories(data) {
       .on("click", () => openStory(s.id, false));
   }
   renderFilters(); render();
-  // The written-out list only updates with the import job, so hide anything no longer approved.
-  const ids = new Set(stories.map(s => s.id));
-  document.querySelectorAll("#storyList article").forEach(a => { a.hidden = !ids.has(a.dataset.id); });
 }
 
 const storiesLoaded = fetch("stories.json", { cache: "no-cache" })
