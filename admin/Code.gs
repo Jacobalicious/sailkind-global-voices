@@ -5,7 +5,7 @@
 
 const RESPONSES_SHEET = "Form Responses 1";
 const PUBLIC_SHEET = "Public";
-const SITE = "https://jacobalicious.github.io/sailkind-global-voices/";
+const SITE = "https://sailkind.com/";
 
 // The website finds these columns by name (see form.js), so keep the wording.
 const PUBLIC_HEADERS = [

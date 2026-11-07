@@ -9,8 +9,6 @@ on:
 permissions:
   contents: write
   issues: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: publish-story
@@ -20,13 +18,10 @@ jobs:
   publish:
     if: github.event.label.name == 'approved'
     runs-on: ubuntu-latest
-    outputs:
-      published: ${{ steps.add.outputs.published }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Add story to stories.json
-        id: add
         uses: actions/github-script@v7
         with:
           script: |
@@ -74,7 +69,6 @@ jobs:
             if (i >= 0) stories[i] = story; else stories.unshift(story);
             fs.writeFileSync("stories.json", JSON.stringify(stories, null, 2) + "\n");
             core.exportVariable("STORY_ID", id);
-            core.setOutput("published", "true");
 
       - name: Commit
         if: env.STORY_ID != ''
@@ -91,12 +85,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const url = `https://${context.repo.owner.toLowerCase()}.github.io/${context.repo.repo}/#${process.env.STORY_ID}`;
+            const url = `https://sailkind.com/#${process.env.STORY_ID}`;
             await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number,
-              body: `🌊 Your story is on the map! It can take a minute or two to appear: ${url}` });
+              body: `🌊 Your story is on the map! It can take a few minutes to appear: ${url}` });
             await github.rest.issues.update({ ...context.repo, issue_number: context.issue.number, state: "closed" });
-
-  deploy:
-    needs: publish
-    if: needs.publish.outputs.published == 'true'
-    uses: ./.github/workflows/pages.yml

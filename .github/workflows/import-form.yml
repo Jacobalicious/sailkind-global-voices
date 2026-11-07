@@ -9,8 +9,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: publish-story
@@ -19,8 +17,6 @@ concurrency:
 jobs:
   import:
     runs-on: ubuntu-latest
-    outputs:
-      changed: ${{ steps.run.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,8 +31,3 @@ jobs:
           git add stories.json
           git commit -m "Import approved form stories"
           git push
-
-  deploy:
-    needs: import
-    if: needs.import.outputs.changed == 'true'
-    uses: ./.github/workflows/pages.yml

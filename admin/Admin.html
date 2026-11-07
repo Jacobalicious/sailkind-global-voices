@@ -379,8 +379,8 @@ async function act(it, action) {
   try {
     await server("saveResponse", it.key, action, story);
     const msg = {
-      approve: `✓ On the map! <a href="${site}?dev" target="_blank">See it in the preview</a> (give Google a minute or two). The public site updates within the hour.`,
-      save: `Saved. <a href="${site}?dev" target="_blank">Check the preview</a> in a minute or two.`,
+      approve: `✓ On the map! <a href="${site}" target="_blank">See it live</a>. Visitors see it within about 10 seconds.`,
+      save: `Saved. <a href="${site}" target="_blank">See it live</a>. Visitors see it within about 10 seconds.`,
       deny: "Denied. It's in the Denied tab if you change your mind.",
       pending: "Moved back to review and taken off the map.",
     }[action];
@@ -406,7 +406,7 @@ const DEMO = (() => {
   ];
   items.forEach(i => i.current = Object.assign({ title: "", lat: "", lng: "", topic: "", hiddenPhotos: [] }, i.original));
   return {
-    listResponses: () => ({ items: JSON.parse(JSON.stringify(items)), site: "https://jacobalicious.github.io/sailkind-global-voices/" }),
+    listResponses: () => ({ items: JSON.parse(JSON.stringify(items)), site: "https://sailkind.com/" }),
     locate: (p, expect) => /chile/i.test(p)
       ? { lat: -33.0472, lng: -71.6127, label: "Valparaíso, Chile", country: "Chile", countryOk: !expect || /chile/i.test(expect) }
       : { lat: 41.9028, lng: 12.4964, label: "Boracay, Italy (demo mismatch)", country: "Italy", countryOk: false },

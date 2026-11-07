@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SailKind Global Voices</title>
 <meta name="description" content="A map of ocean conservation stories from communities around the world.">
+<link rel="canonical" href="https://sailkind.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SailKind">
+<meta property="og:title" content="SailKind Global Voices">
+<meta property="og:description" content="A map of ocean conservation stories from communities around the world.">
+<meta property="og:url" content="https://sailkind.com/">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"SailKind","alternateName":["SailKind Global Voices","Sail Kind"],"url":"https://sailkind.com/"}
+</script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -470,7 +480,7 @@ const storiesLoaded = fetch("stories.json", { cache: "no-cache" })
 
 </script>
 <script type="module">
-// Keeps the map current without waiting for the hourly job that writes stories.json.
+// Keeps the map current without waiting for the job that writes stories.json.
 // stories.json has already drawn the pins by the time this runs; this reads the
 // approved rows straight from the published Google sheet and folds in anything newer.
 // Add ?dev to the address to see what it's doing. (?dev&csv=<link> reads another sheet.)
@@ -534,10 +544,10 @@ async function refresh() {
 
 if (dev) document.getElementById("devRefresh").onclick = refresh;
 refresh();
-// Check again every minute while the tab is on screen (every 15 seconds in the dev
-// preview, where someone is usually watching for a story they just saved), and the
-// moment it is opened again.
-setInterval(() => { if (!document.hidden) refresh(); }, dev ? 15000 : 60000);
+// Check again every 10 seconds while the tab is on screen, so a change on the review
+// page reaches anyone already looking at the map, and the moment it is opened again.
+// Each check runs the feed script, and Google limits how many can run at once.
+setInterval(() => { if (!document.hidden) refresh(); }, 10000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
 </script>
 </body>
