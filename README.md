@@ -8,11 +8,12 @@ A world map of ocean conservation stories. Click a pin to read a community's sto
 - `stories.json` — every published story. The pins come from here.
 - `admin.html` — the review page at https://sailkind.com/admin, where you sign in and approve or deny stories. It holds no story data; it talks to `admin/Code.gs`.
 - `robots.txt`, `sitemap.xml` — help search engines find https://sailkind.com.
+- `share.png`, `icon.png` — the picture shown when a link is shared, and the site icon.
 - Someone clicks **Share your story** → the Google Form opens in a new tab.
 
 ## Hosting
 
-The site runs on Tower (a home server) behind a Cloudflare Tunnel. Tower pulls `main` every 5 minutes and serves only `index.html`, `admin.html`, `form.js`, `stories.json`, `robots.txt` and `sitemap.xml`, so a change here goes live within about 5 minutes. A new public file must also be added to the list on Tower.
+The site runs on Tower (a home server) behind a Cloudflare Tunnel. Tower pulls `main` every 5 minutes and serves only `index.html`, `admin.html`, `form.js`, `stories.json`, `robots.txt`, `sitemap.xml`, `share.png` and `icon.png`, so a change here goes live within about 5 minutes. A new public file must also be added to the list on Tower.
 
 ## Review page sign-in
 
