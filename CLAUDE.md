@@ -15,6 +15,7 @@ A world map of ocean conservation stories at https://sailkind.com. People submit
 - The site runs on Tower behind a Cloudflare Tunnel. Tower pulls `main` every 5 minutes and serves only an allowlist of files, so a new public file must also be added there. Tower's config is not in this repo.
 - Apps Script changes do not go live by pushing to git. They need `admin/deploy.ps1` or `feed/deploy.ps1`, run by the user in their own terminal.
 - Both deployments keep the same `/exec` URL. `admin.html` hard-codes the admin one and `form.js` the feed one.
+- Cloudflare sends `http://` and every `www.` address to `https://sailkind.com/`, which is why Search Console reports those URLs as "Page with redirect". That is intended; the only canonical page is the apex root, and `admin.html` carries `noindex`.
 
 ## Review API rules
 
